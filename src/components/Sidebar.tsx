@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { Filters, Hotel, HotelStateMap, VisitStatus } from '../types';
 
 const STATUS_LABELS: Record<VisitStatus, string> = {
@@ -44,6 +45,7 @@ export function Sidebar({
   onLabelsChange,
   onSelectHotel
 }: SidebarProps) {
+  const importInputRef = useRef<HTMLInputElement>(null);
   const counts = {
     total: hotels.length,
     planned: hotels.filter((hotel) => state[hotel.id]?.status === 'planned').length,
@@ -76,30 +78,31 @@ export function Sidebar({
           업장 추가
         </button>
         <button onClick={onExportAll}>전체 백업</button>
-        <label className="file-label">
+        <button className="file-label" onClick={() => importInputRef.current?.click()}>
           백업 복원
-          <input
-            type="file"
-            accept=".json,application/json"
-            hidden
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0];
-              if (file) onImport(file);
-              event.currentTarget.value = '';
-            }}
-          />
-        </label>
+        </button>
         <button onClick={onExportHotels}>업장목록 내보내기</button>
         <button className="danger" onClick={onClear}>
           기록 초기화
         </button>
       </div>
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0];
+          if (file) onImport(file);
+          event.currentTarget.value = '';
+        }}
+      />
 
       <div className="stats">
-        <div className="stat">
+        <button className={`stat ${filters.status === '' ? 'active' : ''}`} onClick={() => updateFilter({ status: '' })}>
           <strong>{counts.total}</strong>
           <span>전체 업장</span>
-        </div>
+        </button>
         {(['planned', 'today', 'visited', 'excluded'] as VisitStatus[]).map((status) => (
           <button
             key={status}
@@ -120,7 +123,7 @@ export function Sidebar({
       />
       <div className="row">
         <div>
-          <label className="field">지역</label>
+          <label className="field">시도</label>
           <select value={filters.area} onChange={(event) => updateFilter({ area: event.target.value })}>
             <option value="">전체 지역</option>
             {areas.map((area) => (
@@ -147,9 +150,9 @@ export function Sidebar({
       </label>
       <button
         id="reset"
-        onClick={() => onFiltersChange({ status: 'planned', search: '', area: '', minRooms: '' })}
+        onClick={() => onFiltersChange({ status: '', search: '', area: '', minRooms: '' })}
       >
-        필터 초기화 · 방문 예정 보기
+        필터 초기화
       </button>
       <div className="legend">
         {(['planned', 'today', 'visited', 'excluded'] as VisitStatus[]).map((status) => (

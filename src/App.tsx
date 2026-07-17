@@ -116,7 +116,7 @@ function downloadJSON(name: string, value: unknown) {
 
 function matchesFilters(hotel: Hotel, state: HotelStateMap, filters: Filters) {
   const hotelState = state[hotel.id];
-  if (!hotelState || hotelState.status !== filters.status) return false;
+  if (!hotelState || (filters.status && hotelState.status !== filters.status)) return false;
   const minRooms = Number(filters.minRooms || 0);
   const logText = hotelState.logs.map((log) => `${log.date} ${log.type} ${log.note}`).join(' ');
   const haystack = [
@@ -137,15 +137,60 @@ function matchesFilters(hotel: Hotel, state: HotelStateMap, filters: Filters) {
 
   return (
     (!filters.search.trim() || haystack.includes(filters.search.trim().toLowerCase())) &&
-    (!filters.area || hotel.area === filters.area) &&
+    (!filters.area || getProvince(hotel.area) === filters.area) &&
     (!minRooms || (hotel.rooms || 0) >= minRooms)
   );
+}
+
+function getProvince(area: string): string {
+  const first = area.trim().split(/\s+/)[0];
+  const provinceMap: Record<string, string> = {
+    다대포: '부산',
+    명지: '부산',
+    송도: '부산',
+    영도: '부산',
+    하단: '부산',
+    신호동: '부산',
+    지사동: '부산',
+    가포: '경남',
+    내서: '경남',
+    내외동: '경남',
+    댓거리: '경남',
+    명서: '경남',
+    봉곡: '경남',
+    부원동: '경남',
+    삼계: '경남',
+    상남: '경남',
+    신항: '경남',
+    어방동: '경남',
+    오동동: '경남',
+    외동: '경남',
+    용원: '경남',
+    용호: '경남',
+    율하: '경남',
+    장유: '경남',
+    주촌: '경남',
+    중앙: '경남',
+    중앙동: '경남',
+    진동: '경남',
+    진북: '경남',
+    진해: '경남',
+    합성: '경남',
+    두동: '울산',
+    경주: '경북'
+  };
+
+  if (['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'].includes(first)) {
+    return first;
+  }
+
+  return provinceMap[first] || '기타';
 }
 
 export default function App() {
   const [hotels, setHotels] = useState<Hotel[]>(() => loadInitialHotels());
   const [state, setState] = useState<HotelStateMap>(() => buildState(loadInitialHotels()));
-  const [filters, setFilters] = useState<Filters>({ status: 'planned', search: '', area: '', minRooms: '' });
+  const [filters, setFilters] = useState<Filters>({ status: '', search: '', area: '', minRooms: '' });
   const [labelsVisible, setLabelsVisible] = useState(true);
   const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
   const [editingHotelId, setEditingHotelId] = useState<string | null>(null);
@@ -188,7 +233,7 @@ export default function App() {
   );
 
   const areas = useMemo(
-    () => [...new Set(hotels.map((hotel) => hotel.area).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')),
+    () => [...new Set(hotels.map((hotel) => getProvince(hotel.area)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')),
     [hotels]
   );
 
@@ -304,6 +349,7 @@ export default function App() {
       } else {
         throw new Error('Invalid backup format');
       }
+      setFilters({ status: '', search: '', area: '', minRooms: '' });
       alert('백업을 복원했어.');
     } catch {
       alert('올바른 영업지도 백업 파일이 아니야.');

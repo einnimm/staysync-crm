@@ -59,7 +59,7 @@ export interface HotelState {
 export type HotelStateMap = Record<string, HotelState>;
 
 export interface Filters {
-  status: VisitStatus;
+  status: VisitStatus | '';
   search: string;
   area: string;
   minRooms: string;
