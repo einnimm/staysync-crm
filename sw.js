@@ -1,4 +1,4 @@
-const CACHE="staysync-sales-map-v2";
+const CACHE="staysync-sales-map-v21";
 const CORE=["./","./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png"];
 const EXTERNAL=["https://unpkg.com/leaflet@1.9.4/dist/leaflet.css","https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"];
 self.addEventListener("install",event=>{
