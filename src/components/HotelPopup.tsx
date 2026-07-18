@@ -16,6 +16,8 @@ interface HotelPopupProps {
   hotel: Hotel;
   hotelState: HotelState;
   statusLabel: string;
+  isSheet?: boolean;
+  onClose?: () => void;
   onStatusChange: (id: string, status: VisitStatus) => void;
   onSaveProfile: (id: string, form: FormData) => void;
   onAddVisitLog: (id: string, form: FormData) => void;
@@ -27,6 +29,8 @@ export function HotelPopup({
   hotel,
   hotelState,
   statusLabel,
+  isSheet = false,
+  onClose,
   onStatusChange,
   onSaveProfile,
   onAddVisitLog,
@@ -38,16 +42,25 @@ export function HotelPopup({
   );
 
   return (
-    <div className="popup">
-      <h3>
-        {hotel.area} {hotel.name}
-      </h3>
-      <div className="meta">
-        <span className={`badge ${hotelState.status}`}>{statusLabel}</span> ·{' '}
-        {hotel.rooms ?? '객실 수 확인 필요'}
-        {hotel.rooms !== null ? '객실' : ''}
+    <div className={`popup ${isSheet ? 'sheet-popup' : ''}`}>
+      <div className="popup-head">
+        <div>
+          <h3>
+            {hotel.area} {hotel.name}
+          </h3>
+          <div className="meta">
+            <span className={`badge ${hotelState.status}`}>{statusLabel}</span> ·{' '}
+            {hotel.rooms ?? '객실 수 확인 필요'}
+            {hotel.rooms !== null ? '객실' : ''}
+          </div>
+        </div>
+        {isSheet && onClose && (
+          <button className="sheet-close" type="button" onClick={onClose} aria-label="닫기">
+            닫기
+          </button>
+        )}
       </div>
-      <table>
+      {!isSheet && <table>
         <tbody>
           <tr>
             <td>대표 미팅</td>
@@ -76,12 +89,16 @@ export function HotelPopup({
             <td>{hotel.vendor || '미확인'}</td>
           </tr>
         </tbody>
-      </table>
+      </table>}
 
-      <div className="section-title">태그</div>
-      <div>
-        {hotelState.tags.length ? hotelState.tags.map((tag) => <span key={tag} className="tag">#{tag}</span>) : <span className="meta">태그 없음</span>}
-      </div>
+      {!isSheet && (
+        <>
+          <div className="section-title">태그</div>
+          <div>
+            {hotelState.tags.length ? hotelState.tags.map((tag) => <span key={tag} className="tag">#{tag}</span>) : <span className="meta">태그 없음</span>}
+          </div>
+        </>
+      )}
 
       <div className="statusbar">
         {(['planned', 'today', 'visited', 'excluded'] as VisitStatus[]).map((status) => (
@@ -95,35 +112,39 @@ export function HotelPopup({
         event.preventDefault();
         onSaveProfile(hotel.id, new FormData(event.currentTarget));
       }}>
-        <div className="section-title">영업 정보 수정</div>
+        <div className="section-title">{isSheet ? '대표 미팅 메모' : '영업 정보 수정'}</div>
         <label className="field">대표 미팅</label>
         <input name="meeting" defaultValue={hotelState.meeting} placeholder="예: 월·수·금 16시 이후 / 전화 후 방문" />
-        <div className="mini-grid">
-          <div>
-            <label className="field">계약상태</label>
-            <select name="salesStage" defaultValue={hotelState.salesStage}>
-              {SALES_STAGES.map((stage) => <option key={stage}>{stage}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="field">다음 방문일</label>
-            <input name="nextVisit" type="date" defaultValue={hotelState.nextVisit} />
-          </div>
-        </div>
-        <label className="field">진행 액션</label>
-        <div className="action-grid">
-          {ACTIONS.map((action) => (
-            <label key={action} className="action-check">
-              <input name="actions" type="checkbox" value={action} defaultChecked={Boolean(hotelState.actions[action])} />
-              {action}
-            </label>
-          ))}
-        </div>
-        <label className="field">태그</label>
-        <input name="tags" defaultValue={hotelState.tags.join(', ')} placeholder="벤디트, 대표미팅, 재방문" />
+        {!isSheet && (
+          <>
+            <div className="mini-grid">
+              <div>
+                <label className="field">계약상태</label>
+                <select name="salesStage" defaultValue={hotelState.salesStage}>
+                  {SALES_STAGES.map((stage) => <option key={stage}>{stage}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="field">다음 방문일</label>
+                <input name="nextVisit" type="date" defaultValue={hotelState.nextVisit} />
+              </div>
+            </div>
+            <label className="field">진행 액션</label>
+            <div className="action-grid">
+              {ACTIONS.map((action) => (
+                <label key={action} className="action-check">
+                  <input name="actions" type="checkbox" value={action} defaultChecked={Boolean(hotelState.actions[action])} />
+                  {action}
+                </label>
+              ))}
+            </div>
+            <label className="field">태그</label>
+            <input name="tags" defaultValue={hotelState.tags.join(', ')} placeholder="벤디트, 대표미팅, 재방문" />
+          </>
+        )}
         <label className="field">요약 메모</label>
         <textarea name="memo" className="compact" defaultValue={hotelState.memo} placeholder="현재 핵심 상황만 간단히" />
-        <button className="save full" type="submit">영업 정보 저장</button>
+        <button className="save full" type="submit">{isSheet ? '저장' : '영업 정보 저장'}</button>
       </form>
 
       <form className="popup-form" onSubmit={(event) => {
@@ -131,7 +152,7 @@ export function HotelPopup({
         onAddVisitLog(hotel.id, new FormData(event.currentTarget));
         event.currentTarget.reset();
       }}>
-        <div className="section-title">방문일지 추가</div>
+        <div className="section-title">{isSheet ? '방문일지 간단 입력' : '방문일지 추가'}</div>
         <div className="mini-grid">
           <input name="date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
           <select name="type" defaultValue="첫 방문">
@@ -142,25 +163,67 @@ export function HotelPopup({
         <button className="visited full" type="submit">방문일지 누적 저장</button>
       </form>
 
-      <div className="section-title">방문 타임라인</div>
-      {sortedLogs.length ? (
-        <div className="timeline">
-          {sortedLogs.map((log) => (
-            <div key={log.id} className="log">
-              <b>{log.date || '-'} · {log.type || '방문'}</b>
-              <p>{log.note || '내용 없음'}</p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="meta">아직 방문일지가 없어.</div>
+      {isSheet && (
+        <details className="sheet-details">
+          <summary>세부 관리</summary>
+          <table>
+            <tbody>
+              <tr>
+                <td>계약상태</td>
+                <td><span className="sales-pill">{hotelState.salesStage || '미접촉'}</span></td>
+              </tr>
+              <tr>
+                <td>다음 방문</td>
+                <td>{hotelState.nextVisit || '-'}</td>
+              </tr>
+              <tr>
+                <td>태그</td>
+                <td>{hotelState.tags.length ? hotelState.tags.map((tag) => <span key={tag} className="tag">#{tag}</span>) : '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="section-title">영업 액션</div>
+          <div className="action-grid">
+            {ACTIONS.map((action) => (
+              <label key={action} className="action-check">
+                <input type="checkbox" checked={Boolean(hotelState.actions[action])} readOnly />
+                {action}
+              </label>
+            ))}
+          </div>
+          <div className="actions">
+            <a className="naver" href={naverUrl(hotel)} target="_blank" rel="noopener noreferrer">네이버지도</a>
+            <button className="edit" onClick={() => onEdit(hotel.id)}>업장 수정</button>
+            <button className="delete" onClick={() => onDelete(hotel.id)}>업장 삭제</button>
+          </div>
+        </details>
       )}
 
-      <div className="actions">
-        <a className="naver" href={naverUrl(hotel)} target="_blank" rel="noopener noreferrer">네이버지도</a>
-        <button className="edit" onClick={() => onEdit(hotel.id)}>업장 수정</button>
-        <button className="delete" onClick={() => onDelete(hotel.id)}>업장 삭제</button>
-      </div>
+      {(!isSheet || sortedLogs.length > 0) && (
+        <details className={isSheet ? 'sheet-details' : ''} open={!isSheet}>
+          <summary className={!isSheet ? 'desktop-summary' : ''}>방문 타임라인</summary>
+          {sortedLogs.length ? (
+            <div className="timeline">
+              {sortedLogs.map((log) => (
+                <div key={log.id} className="log">
+                  <b>{log.date || '-'} · {log.type || '방문'}</b>
+                  <p>{log.note || '내용 없음'}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="meta">아직 방문일지가 없어.</div>
+          )}
+        </details>
+      )}
+
+      {!isSheet && (
+        <div className="actions">
+          <a className="naver" href={naverUrl(hotel)} target="_blank" rel="noopener noreferrer">네이버지도</a>
+          <button className="edit" onClick={() => onEdit(hotel.id)}>업장 수정</button>
+          <button className="delete" onClick={() => onDelete(hotel.id)}>업장 삭제</button>
+        </div>
+      )}
     </div>
   );
 }

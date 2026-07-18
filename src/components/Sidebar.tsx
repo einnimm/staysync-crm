@@ -139,9 +139,9 @@ export function Sidebar({
       />
       <div className="row">
         <div>
-          <label className="field">시도</label>
+          <label className="field">영업권역</label>
           <select value={filters.area} onChange={(event) => updateFilter({ area: event.target.value })}>
-            <option value="">전체 지역</option>
+            <option value="">전체 권역</option>
             {areas.map((area) => (
               <option key={area} value={area}>
                 {area}

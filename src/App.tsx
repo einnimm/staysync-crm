@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { HotelForm, type EditorDraft } from './components/HotelForm';
+import { HotelPopup } from './components/HotelPopup';
 import { Map } from './components/Map';
 import { DEFAULT_HOTELS } from './lib/defaultHotels';
 import { loadSavedHotels, loadSavedState, saveAll } from './lib/storage';
@@ -118,9 +119,11 @@ function matchesFilters(hotel: Hotel, state: HotelStateMap, filters: Filters) {
   const hotelState = state[hotel.id];
   if (!hotelState || (filters.status && hotelState.status !== filters.status)) return false;
   const minRooms = Number(filters.minRooms || 0);
+  const salesRegion = getSalesRegion(hotel);
   const logText = hotelState.logs.map((log) => `${log.date} ${log.type} ${log.note}`).join(' ');
   const haystack = [
     hotel.area,
+    salesRegion,
     hotel.name,
     hotel.note,
     hotel.vendor,
@@ -137,54 +140,53 @@ function matchesFilters(hotel: Hotel, state: HotelStateMap, filters: Filters) {
 
   return (
     (!filters.search.trim() || haystack.includes(filters.search.trim().toLowerCase())) &&
-    (!filters.area || getProvince(hotel.area) === filters.area) &&
+    (!filters.area || salesRegion === filters.area) &&
     (!minRooms || (hotel.rooms || 0) >= minRooms)
   );
 }
 
-function getProvince(area: string): string {
-  const first = area.trim().split(/\s+/)[0];
-  const provinceMap: Record<string, string> = {
-    다대포: '부산',
-    명지: '부산',
-    송도: '부산',
-    영도: '부산',
-    하단: '부산',
-    신호동: '부산',
-    지사동: '부산',
-    가포: '경남',
-    내서: '경남',
-    내외동: '경남',
-    댓거리: '경남',
-    명서: '경남',
-    봉곡: '경남',
-    부원동: '경남',
-    삼계: '경남',
-    상남: '경남',
-    신항: '경남',
-    어방동: '경남',
-    오동동: '경남',
-    외동: '경남',
-    용원: '경남',
-    용호: '경남',
-    율하: '경남',
-    장유: '경남',
-    주촌: '경남',
-    중앙: '경남',
-    중앙동: '경남',
-    진동: '경남',
-    진북: '경남',
-    진해: '경남',
-    합성: '경남',
-    두동: '울산',
-    경주: '경북'
+function getSalesRegion(hotel: Hotel): string {
+  const area = hotel.area.trim();
+  const first = area.split(/\s+/)[0];
+  const regionMap: Record<string, string> = {
+    부원동: '김해',
+    주촌: '김해',
+    삼계: '김해',
+    내외동: '김해',
+    어방동: '김해',
+    외동: '김해',
+    율하: '장유',
+    장유: '장유',
+    명서: '창원',
+    봉곡: '창원',
+    상남: '창원',
+    용호: '창원',
+    가포: '마산',
+    내서: '마산',
+    댓거리: '마산',
+    오동동: '마산',
+    합성: '마산',
+    중앙: '마산',
+    진동: '마산',
+    진북: '마산',
+    진해: '진해',
+    중앙동: '진해',
+    두동: '진해',
+    신호동: '부산 강서/신항',
+    신항: '부산 강서/신항',
+    용원: '부산 강서/신항',
+    명지: '부산 강서/신항',
+    지사동: '부산 강서/신항',
+    하단: '부산 사하',
+    다대포: '부산 사하',
+    남포: '부산 중구·남포',
+    송도: '부산 서구·송도',
+    영도: '부산 영도',
+    경주: '경주'
   };
 
-  if (['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'].includes(first)) {
-    return first;
-  }
-
-  return provinceMap[first] || '기타';
+  if (first === '두동') return '진해';
+  return regionMap[first] || first || '기타';
 }
 
 export default function App() {
@@ -235,7 +237,7 @@ export default function App() {
   );
 
   const areas = useMemo(
-    () => [...new Set(hotels.map((hotel) => getProvince(hotel.area)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')),
+    () => [...new Set(hotels.map((hotel) => getSalesRegion(hotel)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')),
     [hotels]
   );
 
@@ -244,6 +246,7 @@ export default function App() {
     [hotels, state]
   );
 
+  const selectedHotel = selectedHotelId ? hotels.find((hotel) => hotel.id === selectedHotelId) || null : null;
   const editingHotel = editingHotelId ? hotels.find((hotel) => hotel.id === editingHotelId) || null : null;
   const showEditor = (isAdding || Boolean(editingHotel)) && !pickingLocation;
 
@@ -280,21 +283,32 @@ export default function App() {
 
   const handleSaveProfile = (id: string, form: FormData) => {
     const selectedActions = new Set(form.getAll('actions').map(String));
-    const actions = ACTIONS.reduce<ActionMap>((acc, action) => {
-      acc[action] = selectedActions.has(action);
-      return acc;
-    }, {});
-    const salesStage = String(form.get('salesStage') || '미접촉') as SalesStage;
 
     updateStateForHotel(id, (current) => ({
       ...current,
-      meeting: String(form.get('meeting') || '').trim(),
-      salesStage,
-      nextVisit: String(form.get('nextVisit') || ''),
-      actions: salesStage === '도입완료' ? { ...actions, '도입 완료': true } : actions,
-      tags: String(form.get('tags') || '').split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean),
-      memo: String(form.get('memo') || '').trim(),
-      status: salesStage === '영업제외' ? 'excluded' : current.status
+      ...(() => {
+        const salesStage = form.has('salesStage')
+          ? (String(form.get('salesStage') || '미접촉') as SalesStage)
+          : current.salesStage;
+        const actions = form.has('actions')
+          ? ACTIONS.reduce<ActionMap>((acc, action) => {
+              acc[action] = selectedActions.has(action);
+              return acc;
+            }, {})
+          : current.actions;
+
+        return {
+          meeting: form.has('meeting') ? String(form.get('meeting') || '').trim() : current.meeting,
+          salesStage,
+          nextVisit: form.has('nextVisit') ? String(form.get('nextVisit') || '') : current.nextVisit,
+          actions: form.has('actions') && salesStage === '도입완료' ? { ...actions, '도입 완료': true } : actions,
+          tags: form.has('tags')
+            ? String(form.get('tags') || '').split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean)
+            : current.tags,
+          memo: form.has('memo') ? String(form.get('memo') || '').trim() : current.memo,
+          status: form.has('salesStage') && salesStage === '영업제외' ? 'excluded' : current.status
+        };
+      })()
     }));
   };
 
@@ -417,7 +431,10 @@ export default function App() {
         onClear={handleClear}
         onFiltersChange={setFilters}
         onLabelsChange={setLabelsVisible}
-        onSelectHotel={(hotel) => setSelectedHotelId(hotel.id)}
+        onSelectHotel={(hotel) => {
+          setSelectedHotelId(hotel.id);
+          setMobilePanelOpen(false);
+        }}
         onTodayRoute={handleTodayRoute}
         onToggleMobilePanel={() => setMobilePanelOpen((current) => !current)}
       />
@@ -462,6 +479,34 @@ export default function App() {
           onPickLocation={() => setPickingLocation(true)}
           key={`${editingHotel?.id || 'new'}-${pickedLocation?.lat || 'x'}-${pickedLocation?.lon || 'x'}`}
         />
+      )}
+      {selectedHotel && state[selectedHotel.id] && (
+        <div className="mobile-sheet" role="dialog" aria-label="업장 상세">
+          <HotelPopup
+            hotel={selectedHotel}
+            hotelState={state[selectedHotel.id]}
+            statusLabel={
+              state[selectedHotel.id].status === 'planned'
+                ? '방문 예정'
+                : state[selectedHotel.id].status === 'today'
+                  ? '오늘 방문'
+                  : state[selectedHotel.id].status === 'visited'
+                    ? '방문 완료'
+                    : '영업 제외'
+            }
+            isSheet
+            onClose={() => setSelectedHotelId(null)}
+            onStatusChange={handleStatusChange}
+            onSaveProfile={handleSaveProfile}
+            onAddVisitLog={handleAddVisitLog}
+            onEdit={(id) => {
+              setEditingHotelId(id);
+              setIsAdding(false);
+              setPickedLocation(null);
+            }}
+            onDelete={handleDelete}
+          />
+        </div>
       )}
     </div>
   );
