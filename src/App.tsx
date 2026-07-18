@@ -8,7 +8,7 @@ import { loadSavedHotels, loadSavedState, saveAll } from './lib/storage';
 import type { ActionMap, Filters, Hotel, HotelState, HotelStateMap, SalesStage, VisitStatus } from './types';
 
 const ACTIONS = ['명함 전달', '직원 설명 완료', '대표 미팅 완료', '견적 전달', '프로모션 안내', '계약서 전달', '도입 완료'];
-const MAX_RENDERED_HOTELS = 500;
+const MAX_RENDERED_HOTELS = 300;
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -272,13 +272,21 @@ export default function App() {
     };
   }, []);
 
-  const visibleHotels = useMemo(
+  const shouldShowFilteredResults = useMemo(
     () =>
-      hotels
-        .filter((hotel) => matchesFilters(hotel, state, filters))
-        .sort((a, b) => a.area.localeCompare(b.area, 'ko') || a.name.localeCompare(b.name, 'ko')),
-    [filters, hotels, state]
+      Boolean(filters.search.trim() || filters.area || filters.minRooms) ||
+      filters.status === 'today' ||
+      filters.status === 'visited' ||
+      filters.status === 'excluded',
+    [filters]
   );
+
+  const visibleHotels = useMemo(() => {
+    if (!shouldShowFilteredResults) return [];
+    return hotels
+      .filter((hotel) => matchesFilters(hotel, state, filters))
+      .sort((a, b) => a.area.localeCompare(b.area, 'ko') || a.name.localeCompare(b.name, 'ko'));
+  }, [filters, hotels, shouldShowFilteredResults, state]);
 
   const areas = useMemo(
     () => [...new Set(hotels.map((hotel) => getSalesRegion(hotel)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')),
@@ -476,7 +484,6 @@ export default function App() {
         state={state}
         totalCounts={totalCounts}
         filteredCount={visibleHotels.length}
-        renderedLimit={MAX_RENDERED_HOTELS}
         filters={filters}
         areas={areas}
         isLoadingHotels={isLoadingHotels}

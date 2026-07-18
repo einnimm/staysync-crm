@@ -13,7 +13,6 @@ interface SidebarProps {
   state: HotelStateMap;
   totalCounts: Record<VisitStatus | 'total', number>;
   filteredCount: number;
-  renderedLimit: number;
   filters: Filters;
   areas: string[];
   isLoadingHotels: boolean;
@@ -39,7 +38,6 @@ export function Sidebar({
   state,
   totalCounts,
   filteredCount,
-  renderedLimit,
   filters,
   areas,
   isLoadingHotels,
@@ -211,9 +209,9 @@ export function Sidebar({
           <div className="empty">
             {isLoadingHotels
               ? '전국 숙소 DB를 불러오는 중이야.'
-              : renderedLimit
-                ? '조건에 맞는 업장이 없어.'
-                : '지도 표시 한도가 0으로 설정되어 있어.'}
+              : filters.status === '' || filters.status === 'planned'
+                ? '검색어나 권역으로 좁히면 업장 목록과 지도 핀이 표시돼.'
+                : '조건에 맞는 업장이 없어.'}
           </div>
         )}
       </div>
