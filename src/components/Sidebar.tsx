@@ -99,7 +99,7 @@ export function Sidebar({
       />
 
       <div className="stats">
-        <button className={`stat ${filters.status === '' ? 'active' : ''}`} onClick={() => updateFilter({ status: '' })}>
+        <button className={`stat total ${filters.status === '' ? 'active' : ''}`} onClick={() => updateFilter({ status: '' })}>
           <strong>{counts.total}</strong>
           <span>전체 업장</span>
         </button>
