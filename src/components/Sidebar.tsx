@@ -12,6 +12,8 @@ interface SidebarProps {
   hotels: Hotel[];
   state: HotelStateMap;
   totalCounts: Record<VisitStatus | 'total', number>;
+  filteredCount: number;
+  renderedLimit: number;
   filters: Filters;
   areas: string[];
   isLoadingHotels: boolean;
@@ -36,6 +38,8 @@ export function Sidebar({
   hotels,
   state,
   totalCounts,
+  filteredCount,
+  renderedLimit,
   filters,
   areas,
   isLoadingHotels,
@@ -184,6 +188,11 @@ export function Sidebar({
         ))}
       </div>
       <div className="list">
+        {filteredCount > hotels.length && (
+          <div className="empty">
+            조건에 맞는 업장 {filteredCount.toLocaleString('ko-KR')}개 중 {hotels.length.toLocaleString('ko-KR')}개만 표시 중이야. 검색어나 권역으로 좁히면 더 정확히 볼 수 있어.
+          </div>
+        )}
         {hotels.map((hotel) => {
           const hotelState = state[hotel.id];
           const latest = [...(hotelState?.logs || [])].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
@@ -198,7 +207,15 @@ export function Sidebar({
             </button>
           );
         })}
-        {!hotels.length && <div className="empty">{isLoadingHotels ? '전국 숙소 DB를 불러오는 중이야.' : '조건에 맞는 업장이 없어.'}</div>}
+        {!hotels.length && (
+          <div className="empty">
+            {isLoadingHotels
+              ? '전국 숙소 DB를 불러오는 중이야.'
+              : renderedLimit
+                ? '조건에 맞는 업장이 없어.'
+                : '지도 표시 한도가 0으로 설정되어 있어.'}
+          </div>
+        )}
       </div>
       </div>
     </aside>

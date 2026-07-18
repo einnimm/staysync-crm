@@ -8,6 +8,7 @@ import { loadSavedHotels, loadSavedState, saveAll } from './lib/storage';
 import type { ActionMap, Filters, Hotel, HotelState, HotelStateMap, SalesStage, VisitStatus } from './types';
 
 const ACTIONS = ['명함 전달', '직원 설명 완료', '대표 미팅 완료', '견적 전달', '프로모션 안내', '계약서 전달', '도입 완료'];
+const MAX_RENDERED_HOTELS = 500;
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -289,6 +290,20 @@ export default function App() {
     [hotels, state]
   );
 
+  const renderedHotels = useMemo(() => {
+    const pinnedIds = new Set([
+      ...todayHotels.map((hotel) => hotel.id),
+      ...(selectedHotelId ? [selectedHotelId] : [])
+    ]);
+    const pinnedHotels = hotels.filter((hotel) => pinnedIds.has(hotel.id));
+    const visibleIds = new Set(pinnedHotels.map((hotel) => hotel.id));
+    const limitedVisibleHotels = visibleHotels
+      .filter((hotel) => !visibleIds.has(hotel.id))
+      .slice(0, Math.max(0, MAX_RENDERED_HOTELS - pinnedHotels.length));
+
+    return [...pinnedHotels, ...limitedVisibleHotels];
+  }, [hotels, selectedHotelId, todayHotels, visibleHotels]);
+
   const totalCounts = useMemo(
     () => ({
       total: hotels.length,
@@ -457,9 +472,11 @@ export default function App() {
   return (
     <div className="app">
       <Sidebar
-        hotels={visibleHotels}
+        hotels={renderedHotels}
         state={state}
         totalCounts={totalCounts}
+        filteredCount={visibleHotels.length}
+        renderedLimit={MAX_RENDERED_HOTELS}
         filters={filters}
         areas={areas}
         isLoadingHotels={isLoadingHotels}
@@ -495,7 +512,7 @@ export default function App() {
         onToggleMobilePanel={() => setMobilePanelOpen((current) => !current)}
       />
       <Map
-        hotels={visibleHotels}
+        hotels={renderedHotels}
         todayHotels={todayHotels}
         state={state}
         labelsVisible={labelsVisible}
