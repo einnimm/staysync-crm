@@ -190,6 +190,19 @@ textarea { resize: vertical; min-height: 82px; }
 }
 .save { background: var(--ink); color: #fff; }
 .naver { background: #03c75a; color: #fff; }
+.sheet-nav {
+  display: block;
+  width: 100%;
+  border-radius: var(--control-radius);
+  min-height: var(--control-height);
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  margin-top: var(--control-gap);
+}
 .edit { background: #eef2f6; color: #344054; }
 .delete { background: #fff3f2; color: #b42318; }
 .sales-pill { display: inline-block; background: #eef2ff; color: #3446a8; border-radius: 7px; padding: 4px 7px; font-weight: 800; }

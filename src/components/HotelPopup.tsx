@@ -100,6 +100,12 @@ export function HotelPopup({
         </>
       )}
 
+      {isSheet && (
+        <a className="naver sheet-nav" href={naverUrl(hotel)} target="_blank" rel="noopener noreferrer">
+          네이버 길찾기
+        </a>
+      )}
+
       <div className="statusbar">
         {(['planned', 'today', 'visited', 'excluded'] as VisitStatus[]).map((status) => (
           <button key={status} className={status} onClick={() => onStatusChange(hotel.id, status)}>
@@ -192,7 +198,6 @@ export function HotelPopup({
             ))}
           </div>
           <div className="actions">
-            <a className="naver" href={naverUrl(hotel)} target="_blank" rel="noopener noreferrer">네이버지도</a>
             <button className="edit" onClick={() => onEdit(hotel.id)}>업장 수정</button>
             <button className="delete" onClick={() => onDelete(hotel.id)}>업장 삭제</button>
           </div>
