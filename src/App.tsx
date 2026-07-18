@@ -94,7 +94,26 @@ function createInitialState(hotel: Hotel, saved?: Partial<HotelState>): HotelSta
 }
 
 function loadInitialHotels(): Hotel[] {
-  return (loadSavedHotels() || DEFAULT_HOTELS).map(normalizeHotel);
+  const savedHotels = loadSavedHotels();
+  if (!savedHotels) return DEFAULT_HOTELS.map(normalizeHotel);
+
+  const normalizedSaved = savedHotels.map(normalizeHotel);
+  return mergeDefaultHotels(normalizedSaved, DEFAULT_HOTELS);
+}
+
+function mergeDefaultHotels(savedHotels: Hotel[], defaultHotels: Hotel[]): Hotel[] {
+  const savedIds = new Set(savedHotels.map((hotel) => hotel.id));
+  return [
+    ...savedHotels,
+    ...defaultHotels.map(normalizeHotel).filter((hotel) => !savedIds.has(hotel.id))
+  ];
+}
+
+async function loadDefaultHotels(): Promise<Hotel[]> {
+  const response = await fetch(`${import.meta.env.BASE_URL}default-hotels.json`);
+  if (!response.ok) throw new Error('Default hotel data load failed');
+  const hotels = (await response.json()) as Partial<Hotel>[];
+  return hotels.map(normalizeHotel);
 }
 
 function buildState(hotels: Hotel[], savedState: Partial<HotelStateMap> = loadSavedState()): HotelStateMap {
@@ -203,6 +222,26 @@ export default function App() {
   const [pickedLocation, setPickedLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadDefaultHotels()
+      .then((defaultHotels) => {
+        if (cancelled) return;
+        const savedHotels = (loadSavedHotels() || []).map(normalizeHotel);
+        const nextHotels = mergeDefaultHotels(savedHotels, defaultHotels);
+        setHotels(nextHotels);
+        setState(buildState(nextHotels, loadSavedState()));
+      })
+      .catch((error) => {
+        console.error('기본 숙소 데이터 로드 오류', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const syncOnline = () => setIsOnline(navigator.onLine);

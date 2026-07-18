@@ -22,11 +22,31 @@ export function loadSavedState(): Partial<HotelStateMap> {
 }
 
 export function saveHotels(hotels: Hotel[]): void {
-  localStorage.setItem(DB_KEY, JSON.stringify(hotels));
+  const userManagedHotels = hotels.filter(
+    (hotel) => !hotel.id.startsWith('flg-') || hotel.note !== '전국 숙소지도 등록 숙소'
+  );
+  localStorage.setItem(DB_KEY, JSON.stringify(userManagedHotels));
 }
 
 export function saveState(state: HotelStateMap): void {
-  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  const activeState = Object.fromEntries(
+    Object.entries(state).filter(([, value]) => {
+      const hasAction = Object.values(value.actions || {}).some(Boolean);
+      return (
+        value.status !== 'planned' ||
+        value.memo ||
+        value.visitCount ||
+        value.lastVisit ||
+        value.nextVisit ||
+        value.meeting ||
+        value.salesStage !== '미접촉' ||
+        hasAction ||
+        value.tags.length ||
+        value.logs.length
+      );
+    })
+  );
+  localStorage.setItem(STATE_KEY, JSON.stringify(activeState));
 }
 
 export function saveAll(hotels: Hotel[], state: HotelStateMap): void {
