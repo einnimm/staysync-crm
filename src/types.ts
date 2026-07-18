@@ -11,6 +11,9 @@ export interface Hotel {
   legal?: boolean;
   excluded?: boolean;
   kiosk?: boolean;
+  kioskVendor?: string;
+  rms?: boolean;
+  rmsVendor?: string;
   vendor: string;
   lat: number;
   lon: number;
@@ -49,7 +52,9 @@ export interface HotelState {
   visitCount: number;
   lastVisit: string;
   nextVisit: string;
+  routeDate: string;
   meeting: string;
+  salesperson: string;
   salesStage: SalesStage;
   actions: ActionMap;
   tags: string[];

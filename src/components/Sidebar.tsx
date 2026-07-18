@@ -15,6 +15,8 @@ interface SidebarProps {
   filteredCount: number;
   filters: Filters;
   areas: string[];
+  selectedRouteDate: string;
+  routeCalendar: Array<{ date: string; routeCount: number; visitedCount: number }>;
   isLoadingHotels: boolean;
   labelsVisible: boolean;
   canInstall: boolean;
@@ -27,6 +29,7 @@ interface SidebarProps {
   onImport: (file: File) => void;
   onClear: () => void;
   onFiltersChange: (filters: Filters) => void;
+  onRouteDateChange: (date: string) => void;
   onLabelsChange: (visible: boolean) => void;
   onSelectHotel: (hotel: Hotel) => void;
   onTodayRoute: () => void;
@@ -40,6 +43,8 @@ export function Sidebar({
   filteredCount,
   filters,
   areas,
+  selectedRouteDate,
+  routeCalendar,
   isLoadingHotels,
   labelsVisible,
   canInstall,
@@ -52,6 +57,7 @@ export function Sidebar({
   onImport,
   onClear,
   onFiltersChange,
+  onRouteDateChange,
   onLabelsChange,
   onSelectHotel,
   onTodayRoute,
@@ -184,6 +190,24 @@ export function Sidebar({
             {STATUS_LABELS[status]}
           </span>
         ))}
+      </div>
+      <div className="route-calendar">
+        <div className="section-title">2주 동선 달력</div>
+        <div className="route-days">
+          {routeCalendar.map((day) => {
+            const label = new Date(`${day.date}T00:00:00`).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' });
+            return (
+              <button
+                key={day.date}
+                className={`route-day ${selectedRouteDate === day.date ? 'active' : ''}`}
+                onClick={() => onRouteDateChange(day.date)}
+              >
+                <b>{label}</b>
+                <span>동선 {day.routeCount} · 방문 {day.visitedCount}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className="list">
         {filteredCount > hotels.length && (

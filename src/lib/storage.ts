@@ -38,7 +38,9 @@ export function saveState(state: HotelStateMap): void {
         value.visitCount ||
         value.lastVisit ||
         value.nextVisit ||
+        value.routeDate ||
         value.meeting ||
+        value.salesperson ||
         value.salesStage !== '미접촉' ||
         hasAction ||
         value.tags.length ||

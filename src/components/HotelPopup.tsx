@@ -84,8 +84,20 @@ export function HotelPopup({
             <td>{hotelState.nextVisit || '-'}</td>
           </tr>
           <tr>
-            <td>장비·업체</td>
-            <td>{hotel.vendor || '미확인'}</td>
+            <td>동선일</td>
+            <td>{hotelState.routeDate || '-'}</td>
+          </tr>
+          <tr>
+            <td>영업자</td>
+            <td>{hotelState.salesperson || '-'}</td>
+          </tr>
+          <tr>
+            <td>키오스크</td>
+            <td>{hotel.kiosk ? hotel.kioskVendor || hotel.vendor || '업체명 미입력' : '없음/미확인'}</td>
+          </tr>
+          <tr>
+            <td>RMS</td>
+            <td>{hotel.rms ? hotel.rmsVendor || '업체명 미입력' : '없음/미확인'}</td>
           </tr>
         </tbody>
       </table>}
@@ -120,6 +132,16 @@ export function HotelPopup({
         <div className="section-title">{isSheet ? '대표 미팅 메모' : '영업 정보 수정'}</div>
         <label className="field">대표 미팅</label>
         <input name="meeting" defaultValue={hotelState.meeting} placeholder="예: 월·수·금 16시 이후 / 전화 후 방문" />
+        <div className="mini-grid">
+          <div>
+            <label className="field">동선일</label>
+            <input name="routeDate" type="date" defaultValue={hotelState.routeDate} />
+          </div>
+          <div>
+            <label className="field">영업자명</label>
+            <input name="salesperson" defaultValue={hotelState.salesperson} placeholder="임봉현, 정민희" />
+          </div>
+        </div>
         {!isSheet && (
           <>
             <div className="mini-grid">
@@ -180,6 +202,22 @@ export function HotelPopup({
               <tr>
                 <td>다음 방문</td>
                 <td>{hotelState.nextVisit || '-'}</td>
+              </tr>
+              <tr>
+                <td>동선일</td>
+                <td>{hotelState.routeDate || '-'}</td>
+              </tr>
+              <tr>
+                <td>영업자</td>
+                <td>{hotelState.salesperson || '-'}</td>
+              </tr>
+              <tr>
+                <td>키오스크</td>
+                <td>{hotel.kiosk ? hotel.kioskVendor || hotel.vendor || '업체명 미입력' : '없음/미확인'}</td>
+              </tr>
+              <tr>
+                <td>RMS</td>
+                <td>{hotel.rms ? hotel.rmsVendor || '업체명 미입력' : '없음/미확인'}</td>
               </tr>
               <tr>
                 <td>태그</td>

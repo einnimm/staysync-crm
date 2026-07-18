@@ -9,6 +9,7 @@ import type { ActionMap, Filters, Hotel, HotelState, HotelStateMap, SalesStage, 
 
 const ACTIONS = ['명함 전달', '직원 설명 완료', '대표 미팅 완료', '견적 전달', '프로모션 안내', '계약서 전달', '도입 완료'];
 const MAX_RENDERED_HOTELS = 300;
+const ROUTE_DAYS = 14;
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -25,6 +26,19 @@ function defaultStage(hotel: Hotel): SalesStage {
   return '미접촉';
 }
 
+function toLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
 function normalizeHotel(hotel: Partial<Hotel>): Hotel {
   const rooms = hotel.rooms as number | string | null | undefined;
   return {
@@ -34,13 +48,16 @@ function normalizeHotel(hotel: Partial<Hotel>): Hotel {
     rooms: rooms === null || rooms === undefined || rooms === '' ? null : Number(rooms),
     note: hotel.note || '',
     vendor: hotel.vendor || '미확인',
+    kiosk: Boolean(hotel.kiosk),
+    kioskVendor: hotel.kioskVendor || (hotel.kiosk && hotel.vendor !== '미확인' ? hotel.vendor : ''),
+    rms: Boolean(hotel.rms),
+    rmsVendor: hotel.rmsVendor || '',
     address: hotel.address || '정확한 주소 확인 필요',
     lat: Number(hotel.lat) || 35.22,
     lon: Number(hotel.lon) || 128.82,
     approx: hotel.approx !== false,
     legal: hotel.legal,
     excluded: hotel.excluded,
-    kiosk: hotel.kiosk,
     initialStatus: hotel.initialStatus || 'planned',
     initialMemo: hotel.initialMemo || '',
     initialVisitCount: Number(hotel.initialVisitCount) || 0,
@@ -59,7 +76,9 @@ function createInitialState(hotel: Hotel, saved?: Partial<HotelState>): HotelSta
     visitCount: hotel.initialVisitCount || 0,
     lastVisit: hotel.initialLastVisit || '',
     nextVisit: hotel.initialNextVisit || '',
+    routeDate: hotel.initialNextVisit || '',
     meeting: hotel.initialMeeting || '',
+    salesperson: '',
     salesStage: hotel.initialSalesStage || defaultStage(hotel),
     actions: {},
     tags: hotel.initialTags || [],
@@ -147,9 +166,12 @@ function matchesFilters(hotel: Hotel, state: HotelStateMap, filters: Filters) {
     hotel.name,
     hotel.note,
     hotel.vendor,
+    hotel.kioskVendor,
+    hotel.rmsVendor,
     hotel.address,
     hotelState.memo,
     hotelState.meeting,
+    hotelState.salesperson,
     hotelState.salesStage,
     Object.keys(hotelState.actions).filter((action) => hotelState.actions[action]).join(' '),
     hotelState.tags.join(' '),
@@ -213,6 +235,7 @@ export default function App() {
   const [hotels, setHotels] = useState<Hotel[]>(() => loadInitialHotels());
   const [state, setState] = useState<HotelStateMap>(() => buildState(loadInitialHotels()));
   const [filters, setFilters] = useState<Filters>({ status: '', search: '', area: '', minRooms: '' });
+  const [selectedRouteDate, setSelectedRouteDate] = useState(() => toLocalDateString(new Date()));
   const [labelsVisible, setLabelsVisible] = useState(true);
   const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
   const [todayRouteFocusKey, setTodayRouteFocusKey] = useState(0);
@@ -293,14 +316,21 @@ export default function App() {
     [hotels]
   );
 
-  const todayHotels = useMemo(
-    () => hotels.filter((hotel) => state[hotel.id]?.status === 'today'),
-    [hotels, state]
+  const todayDate = useMemo(() => toLocalDateString(new Date()), []);
+
+  const routeHotels = useMemo(
+    () =>
+      hotels.filter((hotel) => {
+        const hotelState = state[hotel.id];
+        if (!hotelState) return false;
+        return hotelState.routeDate === selectedRouteDate || (selectedRouteDate === todayDate && hotelState.status === 'today');
+      }),
+    [hotels, selectedRouteDate, state, todayDate]
   );
 
   const renderedHotels = useMemo(() => {
     const pinnedIds = new Set([
-      ...todayHotels.map((hotel) => hotel.id),
+      ...routeHotels.map((hotel) => hotel.id),
       ...(selectedHotelId ? [selectedHotelId] : [])
     ]);
     const pinnedHotels = hotels.filter((hotel) => pinnedIds.has(hotel.id));
@@ -310,17 +340,32 @@ export default function App() {
       .slice(0, Math.max(0, MAX_RENDERED_HOTELS - pinnedHotels.length));
 
     return [...pinnedHotels, ...limitedVisibleHotels];
-  }, [hotels, selectedHotelId, todayHotels, visibleHotels]);
+  }, [hotels, selectedHotelId, routeHotels, visibleHotels]);
 
-  const totalCounts = useMemo(
-    () => ({
-      total: hotels.length,
-      planned: hotels.filter((hotel) => state[hotel.id]?.status === 'planned').length,
-      today: hotels.filter((hotel) => state[hotel.id]?.status === 'today').length,
-      visited: hotels.filter((hotel) => state[hotel.id]?.status === 'visited').length,
-      excluded: hotels.filter((hotel) => state[hotel.id]?.status === 'excluded').length
-    }),
-    [hotels, state]
+  const totalCounts = useMemo(() => {
+    const counts: Record<VisitStatus | 'total', number> = { total: hotels.length, planned: 0, today: 0, visited: 0, excluded: 0 };
+    for (const hotel of hotels) {
+      const status = state[hotel.id]?.status || hotel.initialStatus || 'planned';
+      counts[status] += 1;
+    }
+    return counts;
+  }, [hotels, state]);
+
+  const routeCalendar = useMemo(
+    () =>
+      Array.from({ length: ROUTE_DAYS }, (_, index) => {
+        const date = toLocalDateString(addDays(new Date(), index));
+        let routeCount = 0;
+        let visitedCount = 0;
+        for (const hotel of hotels) {
+          const hotelState = state[hotel.id];
+          if (!hotelState) continue;
+          if (hotelState.routeDate === date || (date === todayDate && hotelState.status === 'today')) routeCount += 1;
+          if (hotelState.logs.some((log) => log.date === date) || hotelState.lastVisit === date) visitedCount += 1;
+        }
+        return { date, routeCount, visitedCount };
+      }),
+    [hotels, state, todayDate]
   );
 
   const selectedHotel = selectedHotelId ? hotels.find((hotel) => hotel.id === selectedHotelId) || null : null;
@@ -339,17 +384,27 @@ export default function App() {
   };
 
   const handleStatusChange = (id: string, status: VisitStatus) => {
-    updateStateForHotel(id, (current) => ({ ...current, status }));
+    updateStateForHotel(id, (current) => ({
+      ...current,
+      status,
+      routeDate: status === 'today' ? todayDate : current.routeDate
+    }));
     if (status === 'today') {
       setFilters({ status: 'today', search: '', area: '', minRooms: '' });
       setSelectedHotelId(id);
+      setSelectedRouteDate(todayDate);
       setMobilePanelOpen(false);
     }
   };
 
   const handleTodayRoute = () => {
-    if (!todayHotels.length) {
-      alert('오늘 방문으로 지정한 업장이 없어.');
+    setSelectedRouteDate(todayDate);
+    const todaysRoute = hotels.filter((hotel) => {
+      const hotelState = state[hotel.id];
+      return hotelState?.routeDate === todayDate || hotelState?.status === 'today';
+    });
+    if (!todaysRoute.length) {
+      alert('오늘 동선으로 지정한 업장이 없어.');
       return;
     }
     setFilters({ status: 'today', search: '', area: '', minRooms: '' });
@@ -376,8 +431,10 @@ export default function App() {
 
         return {
           meeting: form.has('meeting') ? String(form.get('meeting') || '').trim() : current.meeting,
+          salesperson: form.has('salesperson') ? String(form.get('salesperson') || '').trim() : current.salesperson,
           salesStage,
           nextVisit: form.has('nextVisit') ? String(form.get('nextVisit') || '') : current.nextVisit,
+          routeDate: form.has('routeDate') ? String(form.get('routeDate') || '') : current.routeDate,
           actions: form.has('actions') && salesStage === '도입완료' ? { ...actions, '도입 완료': true } : actions,
           tags: form.has('tags')
             ? String(form.get('tags') || '').split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean)
@@ -415,21 +472,56 @@ export default function App() {
     if (draft.id) {
       const nextHotels = hotels.map((hotel) =>
         hotel.id === draft.id
-          ? { ...hotel, area: draft.area, name: draft.name, rooms: draft.rooms, address: draft.address, lat: draft.lat, lon: draft.lon, approx: false, note: draft.note, vendor: draft.vendor }
+          ? {
+              ...hotel,
+              area: draft.area,
+              name: draft.name,
+              rooms: draft.rooms,
+              address: draft.address,
+              lat: draft.lat,
+              lon: draft.lon,
+              approx: false,
+              note: draft.note,
+              vendor: draft.vendor,
+              kiosk: draft.kiosk,
+              kioskVendor: draft.kioskVendor,
+              rms: draft.rms,
+              rmsVendor: draft.rmsVendor
+            }
           : hotel
       );
       const nextState = {
         ...state,
-        [draft.id]: { ...state[draft.id], status: draft.status, meeting: draft.meeting, salesStage: draft.salesStage, tags: draft.tags, actions: draft.actions }
+        [draft.id]: {
+          ...state[draft.id],
+          status: draft.status,
+          meeting: draft.meeting,
+          salesperson: draft.salesperson,
+          routeDate: draft.routeDate,
+          nextVisit: draft.routeDate || state[draft.id].nextVisit,
+          salesStage: draft.salesStage,
+          tags: draft.tags,
+          actions: draft.actions
+        }
       };
       commit(nextHotels, nextState);
     } else {
       const id = newId();
-      const hotel = normalizeHotel({ ...draft, id, initialStatus: draft.status, approx: false });
+      const hotel = normalizeHotel({ ...draft, id, initialStatus: draft.status, initialNextVisit: draft.routeDate, approx: false });
       const nextHotels = [...hotels, hotel];
       const nextState = {
         ...state,
-        [id]: { ...createInitialState(hotel), status: draft.status, meeting: draft.meeting, salesStage: draft.salesStage, tags: draft.tags, actions: draft.actions }
+        [id]: {
+          ...createInitialState(hotel),
+          status: draft.status,
+          meeting: draft.meeting,
+          salesperson: draft.salesperson,
+          routeDate: draft.routeDate,
+          nextVisit: draft.routeDate,
+          salesStage: draft.salesStage,
+          tags: draft.tags,
+          actions: draft.actions
+        }
       };
       commit(nextHotels, nextState);
       setSelectedHotelId(id);
@@ -486,6 +578,8 @@ export default function App() {
         filteredCount={visibleHotels.length}
         filters={filters}
         areas={areas}
+        selectedRouteDate={selectedRouteDate}
+        routeCalendar={routeCalendar}
         isLoadingHotels={isLoadingHotels}
         labelsVisible={labelsVisible}
         canInstall={Boolean(installPrompt)}
@@ -510,6 +604,13 @@ export default function App() {
         onImport={handleImport}
         onClear={handleClear}
         onFiltersChange={setFilters}
+        onRouteDateChange={(date) => {
+          setSelectedRouteDate(date);
+          setFilters({ status: '', search: '', area: '', minRooms: '' });
+          setSelectedHotelId(null);
+          setMobilePanelOpen(false);
+          setTodayRouteFocusKey((current) => current + 1);
+        }}
         onLabelsChange={setLabelsVisible}
         onSelectHotel={(hotel) => {
           setSelectedHotelId(hotel.id);
@@ -520,7 +621,7 @@ export default function App() {
       />
       <Map
         hotels={renderedHotels}
-        todayHotels={todayHotels}
+        todayHotels={routeHotels}
         state={state}
         labelsVisible={labelsVisible}
         selectedHotelId={selectedHotelId}

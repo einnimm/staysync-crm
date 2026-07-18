@@ -22,7 +22,13 @@ export interface EditorDraft {
   lon: number;
   note: string;
   vendor: string;
+  kiosk: boolean;
+  kioskVendor: string;
+  rms: boolean;
+  rmsVendor: string;
   meeting: string;
+  salesperson: string;
+  routeDate: string;
   salesStage: SalesStage;
   tags: string[];
   actions: ActionMap;
@@ -55,7 +61,13 @@ function createDraft(
     lon: pickedLocation?.lon ?? hotel?.lon ?? mapCenter.lon,
     note: hotel?.note || '',
     vendor: hotel?.vendor || '',
+    kiosk: Boolean(hotel?.kiosk),
+    kioskVendor: hotel?.kioskVendor || '',
+    rms: Boolean(hotel?.rms),
+    rmsVendor: hotel?.rmsVendor || '',
     meeting: hotelState?.meeting || '',
+    salesperson: hotelState?.salesperson || '',
+    routeDate: hotelState?.routeDate || hotelState?.nextVisit || '',
     salesStage: hotelState?.salesStage || (hotel ? defaultStage(hotel) : '미접촉'),
     tags: hotelState?.tags || [],
     actions: hotelState?.actions || {}
@@ -93,7 +105,10 @@ export function HotelForm({ hotel, hotelState, mapCenter, pickedLocation, onSave
             address: draft.address.trim() || '정확한 주소 확인 필요',
             note: draft.note.trim(),
             vendor: draft.vendor.trim() || '미확인',
+            kioskVendor: draft.kiosk ? draft.kioskVendor.trim() : '',
+            rmsVendor: draft.rms ? draft.rmsVendor.trim() : '',
             meeting: draft.meeting.trim(),
+            salesperson: draft.salesperson.trim(),
             tags: tagText.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean)
           });
         }}
@@ -147,10 +162,40 @@ export function HotelForm({ hotel, hotelState, mapCenter, pickedLocation, onSave
         <button className="pick-button" type="button" onClick={onPickLocation}>지도에서 위치 선택</button>
         <label className="field">운영 특징·기존 정보</label>
         <textarea value={draft.note} onChange={(event) => update('note', event.target.value)} />
-        <label className="field">키오스크·PMS 업체</label>
-        <input value={draft.vendor} placeholder="예: 야놀자 키오스크, 벤디트" onChange={(event) => update('vendor', event.target.value)} />
-        <label className="field">대표 미팅</label>
-        <input value={draft.meeting} placeholder="예: 월·수·금 16시 이후 / 전화 후 방문" onChange={(event) => update('meeting', event.target.value)} />
+        <div className="equipment-grid">
+          <label className="equipment-check">
+            <input type="checkbox" checked={draft.kiosk} onChange={(event) => update('kiosk', event.target.checked)} />
+            키오스크 있음
+          </label>
+          <input
+            value={draft.kioskVendor}
+            placeholder="키오스크 회사명"
+            disabled={!draft.kiosk}
+            onChange={(event) => update('kioskVendor', event.target.value)}
+          />
+          <label className="equipment-check">
+            <input type="checkbox" checked={draft.rms} onChange={(event) => update('rms', event.target.checked)} />
+            RMS 있음
+          </label>
+          <input
+            value={draft.rmsVendor}
+            placeholder="RMS 업체명"
+            disabled={!draft.rms}
+            onChange={(event) => update('rmsVendor', event.target.value)}
+          />
+        </div>
+        <div className="row">
+          <div>
+            <label className="field">대표 미팅</label>
+            <input value={draft.meeting} placeholder="예: 월·수·금 16시 이후 / 전화 후 방문" onChange={(event) => update('meeting', event.target.value)} />
+          </div>
+          <div>
+            <label className="field">영업자명</label>
+            <input value={draft.salesperson} placeholder="예: 임봉현, 정민희" onChange={(event) => update('salesperson', event.target.value)} />
+          </div>
+        </div>
+        <label className="field">동선일</label>
+        <input value={draft.routeDate} type="date" onChange={(event) => update('routeDate', event.target.value)} />
         <div className="row">
           <div>
             <label className="field">계약상태</label>
