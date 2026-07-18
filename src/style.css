@@ -54,6 +54,17 @@ button { cursor: pointer; }
 .toolbar .primary { background: var(--ink); color: #fff; border-color: var(--ink); }
 .toolbar .add { background: #eaf8ef; color: #166534; border-color: #b7e4c7; }
 .toolbar .danger { background: #fff3f2; color: #b42318; border-color: #fecdca; }
+.mobile-panel-bar { display: none; }
+.desktop-route { margin-bottom: 9px; }
+.today-route {
+  width: 100%;
+  border: 0;
+  border-radius: 9px;
+  padding: 10px;
+  background: var(--today);
+  color: #3d2a00;
+  font-weight: 850;
+}
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
 .stat.total { grid-column: 1 / -1; }
 .stat {
@@ -101,6 +112,23 @@ textarea { resize: vertical; min-height: 82px; }
   font-size: 10px;
   padding: 2px 4px;
   box-shadow: 0 1px 3px #0002;
+}
+.today-pin {
+  filter: drop-shadow(0 0 7px rgba(233, 168, 0, .75));
+  stroke-linecap: round;
+}
+.map-today-route {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 900;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 14px;
+  background: var(--today);
+  color: #3d2a00;
+  font-weight: 900;
+  box-shadow: 0 8px 24px #0003;
 }
 .popup { min-width: 270px; }
 .popup h3 { margin: 0 0 4px; font-size: 17px; }
@@ -177,8 +205,35 @@ textarea { resize: vertical; min-height: 82px; }
 }
 
 @media (max-width: 820px) {
-  .app { grid-template-columns: 1fr; grid-template-rows: 48% 52%; }
-  .sidebar { border-right: 0; border-bottom: 1px solid var(--line); padding: 11px; }
+  .app { display: block; height: 100%; }
+  .map-shell { height: 100%; }
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 76vh;
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 14px 14px 0 0;
+    padding: 10px 11px 12px;
+    box-shadow: 0 -10px 30px #0002;
+    overflow: hidden;
+  }
+  .sidebar.open { overflow: auto; }
+  .sidebar .header, .sidebar .sub, .sidebar-body, .desktop-route { display: none; }
+  .sidebar.open .header { display: flex; }
+  .sidebar.open .sub, .sidebar.open .sidebar-body { display: block; }
+  .mobile-panel-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .panel-toggle {
+    border: 1px solid #cfd7e5;
+    border-radius: 9px;
+    padding: 10px;
+    background: #fff;
+    color: #344054;
+    font-weight: 850;
+  }
+  .map-today-route { top: 12px; right: 12px; }
   .header h1 { font-size: 18px; }
   .stats { gap: 4px; }
   .stat { padding: 6px 3px; }

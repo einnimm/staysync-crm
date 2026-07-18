@@ -1,5 +1,5 @@
 import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Hotel, HotelStateMap, VisitStatus } from '../types';
 import { HotelPopup } from './HotelPopup';
 
@@ -19,12 +19,15 @@ const STATUS_COLORS: Record<VisitStatus, string> = {
 
 interface MapProps {
   hotels: Hotel[];
+  todayHotels: Hotel[];
   state: HotelStateMap;
   labelsVisible: boolean;
   selectedHotelId: string | null;
+  todayRouteFocusKey: number;
   pickingLocation: boolean;
   onSelectHotel: (hotel: Hotel) => void;
   onPickedLocation: (lat: number, lon: number) => void;
+  onTodayRoute: () => void;
   onStatusChange: (id: string, status: VisitStatus) => void;
   onSaveProfile: (id: string, form: FormData) => void;
   onAddVisitLog: (id: string, form: FormData) => void;
@@ -32,8 +35,35 @@ interface MapProps {
   onDelete: (id: string) => void;
 }
 
-function MapFocus({ hotels, selectedHotelId }: { hotels: Hotel[]; selectedHotelId: string | null }) {
+function MapFocus({
+  hotels,
+  todayHotels,
+  selectedHotelId,
+  todayRouteFocusKey
+}: {
+  hotels: Hotel[];
+  todayHotels: Hotel[];
+  selectedHotelId: string | null;
+  todayRouteFocusKey: number;
+}) {
   const map = useMap();
+  const lastTodayRouteFocusKey = useRef(todayRouteFocusKey);
+
+  useEffect(() => {
+    if (lastTodayRouteFocusKey.current === todayRouteFocusKey) return;
+    lastTodayRouteFocusKey.current = todayRouteFocusKey;
+
+    if (todayHotels.length === 1) {
+      const [hotel] = todayHotels;
+      map.setView([hotel.lat, hotel.lon], 16);
+      return;
+    }
+
+    if (todayHotels.length > 1) {
+      const bounds = todayHotels.map((hotel) => [hotel.lat, hotel.lon] as [number, number]);
+      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 });
+    }
+  }, [map, todayHotels, todayRouteFocusKey]);
 
   useEffect(() => {
     if (selectedHotelId) {
@@ -41,7 +71,13 @@ function MapFocus({ hotels, selectedHotelId }: { hotels: Hotel[]; selectedHotelI
       if (hotel) map.setView([hotel.lat, hotel.lon], 15);
       return;
     }
-    if (hotels.length) {
+    if (hotels.length === 1) {
+      const [hotel] = hotels;
+      map.setView([hotel.lat, hotel.lon], 15);
+      return;
+    }
+
+    if (hotels.length > 1) {
       const bounds = hotels.map((hotel) => [hotel.lat, hotel.lon] as [number, number]);
       map.fitBounds(bounds, { padding: [24, 24], maxZoom: 13 });
     }
@@ -61,12 +97,15 @@ function LocationPicker({ enabled, onPickedLocation }: { enabled: boolean; onPic
 
 export function Map({
   hotels,
+  todayHotels,
   state,
   labelsVisible,
   selectedHotelId,
+  todayRouteFocusKey,
   pickingLocation,
   onSelectHotel,
   onPickedLocation,
+  onTodayRoute,
   onStatusChange,
   onSaveProfile,
   onAddVisitLog,
@@ -76,23 +115,30 @@ export function Map({
   return (
     <div className="map-shell">
       {pickingLocation && <div className="pick-banner">지도에서 원하는 위치를 클릭해줘. 좌표가 자동 입력된다.</div>}
+      <button className="map-today-route" onClick={onTodayRoute}>오늘 동선</button>
       <MapContainer center={[35.22, 128.82]} zoom={10} className="map">
         <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
-        <MapFocus hotels={hotels} selectedHotelId={selectedHotelId} />
+        <MapFocus
+          hotels={hotels}
+          todayHotels={todayHotels}
+          selectedHotelId={selectedHotelId}
+          todayRouteFocusKey={todayRouteFocusKey}
+        />
         <LocationPicker enabled={pickingLocation} onPickedLocation={onPickedLocation} />
-        {hotels.map((hotel) => {
+        {[...hotels].sort((a, b) => Number(state[a.id]?.status === 'today') - Number(state[b.id]?.status === 'today')).map((hotel) => {
           const hotelState = state[hotel.id];
           if (!hotelState) return null;
           return (
             <CircleMarker
               key={hotel.id}
               center={[hotel.lat, hotel.lon]}
-              radius={hotelState.status === 'today' ? 9 : 7}
+              radius={hotelState.status === 'today' ? 11 : 7}
               pathOptions={{
                 fillColor: STATUS_COLORS[hotelState.status],
-                color: '#fff',
-                weight: hotelState.status === 'today' ? 3 : 1.5,
-                fillOpacity: 0.95
+                color: hotelState.status === 'today' ? '#172033' : '#fff',
+                weight: hotelState.status === 'today' ? 4 : 1.5,
+                fillOpacity: 0.95,
+                className: hotelState.status === 'today' ? 'today-pin' : ''
               }}
               eventHandlers={{ click: () => onSelectHotel(hotel) }}
             >

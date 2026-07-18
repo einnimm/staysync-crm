@@ -16,6 +16,7 @@ interface SidebarProps {
   labelsVisible: boolean;
   canInstall: boolean;
   isOnline: boolean;
+  isMobileOpen: boolean;
   onInstall: () => void;
   onAdd: () => void;
   onExportAll: () => void;
@@ -25,6 +26,8 @@ interface SidebarProps {
   onFiltersChange: (filters: Filters) => void;
   onLabelsChange: (visible: boolean) => void;
   onSelectHotel: (hotel: Hotel) => void;
+  onTodayRoute: () => void;
+  onToggleMobilePanel: () => void;
 }
 
 export function Sidebar({
@@ -35,6 +38,7 @@ export function Sidebar({
   labelsVisible,
   canInstall,
   isOnline,
+  isMobileOpen,
   onInstall,
   onAdd,
   onExportAll,
@@ -43,7 +47,9 @@ export function Sidebar({
   onClear,
   onFiltersChange,
   onLabelsChange,
-  onSelectHotel
+  onSelectHotel,
+  onTodayRoute,
+  onToggleMobilePanel
 }: SidebarProps) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const counts = {
@@ -57,12 +63,22 @@ export function Sidebar({
   const updateFilter = (patch: Partial<Filters>) => onFiltersChange({ ...filters, ...patch });
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isMobileOpen ? 'open' : ''}`}>
       <div className="header">
         <h1>숙박업 영업지도</h1>
         <span className="version">v2.2.0</span>
       </div>
       <div className="sub">STAYSYNC Sales CRM · 대표 미팅과 방문일지를 현재 기기에 자동 저장</div>
+      <div className="mobile-panel-bar">
+        <button className="today-route" onClick={onTodayRoute}>오늘 동선</button>
+        <button className="panel-toggle" onClick={onToggleMobilePanel}>
+          {isMobileOpen ? '필터 접기' : '필터 펼치기'}
+        </button>
+      </div>
+      <div className="desktop-route">
+        <button className="today-route" onClick={onTodayRoute}>오늘 동선</button>
+      </div>
+      <div className="sidebar-body">
       {!isOnline && (
         <div className="offline show">
           오프라인 상태야. 저장된 기록은 쓸 수 있지만 지도 타일과 네이버지도는 인터넷이 필요해.
@@ -178,6 +194,7 @@ export function Sidebar({
           );
         })}
         {!hotels.length && <div className="empty">조건에 맞는 업장이 없어.</div>}
+      </div>
       </div>
     </aside>
   );

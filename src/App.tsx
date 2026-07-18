@@ -193,6 +193,8 @@ export default function App() {
   const [filters, setFilters] = useState<Filters>({ status: '', search: '', area: '', minRooms: '' });
   const [labelsVisible, setLabelsVisible] = useState(true);
   const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
+  const [todayRouteFocusKey, setTodayRouteFocusKey] = useState(0);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [editingHotelId, setEditingHotelId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [pickingLocation, setPickingLocation] = useState(false);
@@ -237,6 +239,11 @@ export default function App() {
     [hotels]
   );
 
+  const todayHotels = useMemo(
+    () => hotels.filter((hotel) => state[hotel.id]?.status === 'today'),
+    [hotels, state]
+  );
+
   const editingHotel = editingHotelId ? hotels.find((hotel) => hotel.id === editingHotelId) || null : null;
   const showEditor = (isAdding || Boolean(editingHotel)) && !pickingLocation;
 
@@ -253,6 +260,22 @@ export default function App() {
 
   const handleStatusChange = (id: string, status: VisitStatus) => {
     updateStateForHotel(id, (current) => ({ ...current, status }));
+    if (status === 'today') {
+      setFilters({ status: 'today', search: '', area: '', minRooms: '' });
+      setSelectedHotelId(id);
+      setMobilePanelOpen(false);
+    }
+  };
+
+  const handleTodayRoute = () => {
+    if (!todayHotels.length) {
+      alert('오늘 방문으로 지정한 업장이 없어.');
+      return;
+    }
+    setFilters({ status: 'today', search: '', area: '', minRooms: '' });
+    setSelectedHotelId(null);
+    setMobilePanelOpen(false);
+    setTodayRouteFocusKey((current) => current + 1);
   };
 
   const handleSaveProfile = (id: string, form: FormData) => {
@@ -373,6 +396,7 @@ export default function App() {
         labelsVisible={labelsVisible}
         canInstall={Boolean(installPrompt)}
         isOnline={isOnline}
+        isMobileOpen={mobilePanelOpen}
         onInstall={async () => {
           if (!installPrompt) {
             alert('iPhone은 Safari 공유 버튼에서 “홈 화면에 추가”를 선택해줘.');
@@ -394,14 +418,19 @@ export default function App() {
         onFiltersChange={setFilters}
         onLabelsChange={setLabelsVisible}
         onSelectHotel={(hotel) => setSelectedHotelId(hotel.id)}
+        onTodayRoute={handleTodayRoute}
+        onToggleMobilePanel={() => setMobilePanelOpen((current) => !current)}
       />
       <Map
         hotels={visibleHotels}
+        todayHotels={todayHotels}
         state={state}
         labelsVisible={labelsVisible}
         selectedHotelId={selectedHotelId}
+        todayRouteFocusKey={todayRouteFocusKey}
         pickingLocation={pickingLocation}
         onSelectHotel={(hotel) => setSelectedHotelId(hotel.id)}
+        onTodayRoute={handleTodayRoute}
         onPickedLocation={(lat, lon) => {
           setPickedLocation({ lat, lon });
           setPickingLocation(false);
