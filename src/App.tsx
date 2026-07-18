@@ -222,6 +222,7 @@ export default function App() {
   const [pickedLocation, setPickedLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isLoadingHotels, setIsLoadingHotels] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -236,6 +237,9 @@ export default function App() {
       })
       .catch((error) => {
         console.error('기본 숙소 데이터 로드 오류', error);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingHotels(false);
       });
 
     return () => {
@@ -282,6 +286,17 @@ export default function App() {
 
   const todayHotels = useMemo(
     () => hotels.filter((hotel) => state[hotel.id]?.status === 'today'),
+    [hotels, state]
+  );
+
+  const totalCounts = useMemo(
+    () => ({
+      total: hotels.length,
+      planned: hotels.filter((hotel) => state[hotel.id]?.status === 'planned').length,
+      today: hotels.filter((hotel) => state[hotel.id]?.status === 'today').length,
+      visited: hotels.filter((hotel) => state[hotel.id]?.status === 'visited').length,
+      excluded: hotels.filter((hotel) => state[hotel.id]?.status === 'excluded').length
+    }),
     [hotels, state]
   );
 
@@ -444,8 +459,10 @@ export default function App() {
       <Sidebar
         hotels={visibleHotels}
         state={state}
+        totalCounts={totalCounts}
         filters={filters}
         areas={areas}
+        isLoadingHotels={isLoadingHotels}
         labelsVisible={labelsVisible}
         canInstall={Boolean(installPrompt)}
         isOnline={isOnline}

@@ -11,8 +11,10 @@ const STATUS_LABELS: Record<VisitStatus, string> = {
 interface SidebarProps {
   hotels: Hotel[];
   state: HotelStateMap;
+  totalCounts: Record<VisitStatus | 'total', number>;
   filters: Filters;
   areas: string[];
+  isLoadingHotels: boolean;
   labelsVisible: boolean;
   canInstall: boolean;
   isOnline: boolean;
@@ -33,8 +35,10 @@ interface SidebarProps {
 export function Sidebar({
   hotels,
   state,
+  totalCounts,
   filters,
   areas,
+  isLoadingHotels,
   labelsVisible,
   canInstall,
   isOnline,
@@ -53,11 +57,11 @@ export function Sidebar({
 }: SidebarProps) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const counts = {
-    total: hotels.length,
-    planned: hotels.filter((hotel) => state[hotel.id]?.status === 'planned').length,
-    today: hotels.filter((hotel) => state[hotel.id]?.status === 'today').length,
-    visited: hotels.filter((hotel) => state[hotel.id]?.status === 'visited').length,
-    excluded: hotels.filter((hotel) => state[hotel.id]?.status === 'excluded').length
+    total: totalCounts.total,
+    planned: totalCounts.planned,
+    today: totalCounts.today,
+    visited: totalCounts.visited,
+    excluded: totalCounts.excluded
   };
 
   const updateFilter = (patch: Partial<Filters>) => onFiltersChange({ ...filters, ...patch });
@@ -69,6 +73,7 @@ export function Sidebar({
         <span className="version">v2.2.0</span>
       </div>
       <div className="sub">STAYSYNC Sales CRM · 대표 미팅과 방문일지를 현재 기기에 자동 저장</div>
+      {isLoadingHotels && <div className="sub">전국 숙소 DB 불러오는 중...</div>}
       <div className="mobile-panel-bar">
         <button className="today-route" onClick={onTodayRoute}>오늘 동선</button>
         <button className="panel-toggle" onClick={onToggleMobilePanel}>
@@ -193,7 +198,7 @@ export function Sidebar({
             </button>
           );
         })}
-        {!hotels.length && <div className="empty">조건에 맞는 업장이 없어.</div>}
+        {!hotels.length && <div className="empty">{isLoadingHotels ? '전국 숙소 DB를 불러오는 중이야.' : '조건에 맞는 업장이 없어.'}</div>}
       </div>
       </div>
     </aside>
