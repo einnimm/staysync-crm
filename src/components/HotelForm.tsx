@@ -170,8 +170,10 @@ export function HotelForm({ hotel, hotelState, mapCenter, pickedLocation, onSave
           <input
             value={draft.kioskVendor}
             placeholder="키오스크 회사명"
-            disabled={!draft.kiosk}
-            onChange={(event) => update('kioskVendor', event.target.value)}
+            onChange={(event) => {
+              update('kioskVendor', event.target.value);
+              if (event.target.value.trim()) update('kiosk', true);
+            }}
           />
           <label className="equipment-check">
             <input type="checkbox" checked={draft.rms} onChange={(event) => update('rms', event.target.checked)} />
@@ -180,8 +182,10 @@ export function HotelForm({ hotel, hotelState, mapCenter, pickedLocation, onSave
           <input
             value={draft.rmsVendor}
             placeholder="RMS 업체명"
-            disabled={!draft.rms}
-            onChange={(event) => update('rmsVendor', event.target.value)}
+            onChange={(event) => {
+              update('rmsVendor', event.target.value);
+              if (event.target.value.trim()) update('rms', true);
+            }}
           />
         </div>
         <div className="row">

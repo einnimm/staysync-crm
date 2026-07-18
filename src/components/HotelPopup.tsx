@@ -112,9 +112,14 @@ export function HotelPopup({
       )}
 
       {isSheet && (
-        <a className="naver sheet-nav" href={naverUrl(hotel)} target="_blank" rel="noopener noreferrer">
-          네이버 길찾기
-        </a>
+        <div className="sheet-primary-actions">
+          <a className="naver sheet-nav" href={naverUrl(hotel)} target="_blank" rel="noopener noreferrer">
+            네이버 길찾기
+          </a>
+          <button className="edit sheet-nav" type="button" onClick={() => onEdit(hotel.id)}>
+            업장 수정
+          </button>
+        </div>
       )}
 
       <div className="statusbar">
@@ -189,57 +194,6 @@ export function HotelPopup({
         <textarea name="note" className="compact" placeholder="오늘 대화 내용, 반응, 다음 액션" />
         <button className="visited full" type="submit">방문일지 누적 저장</button>
       </form>
-
-      {isSheet && (
-        <details className="sheet-details">
-          <summary>세부 관리</summary>
-          <table>
-            <tbody>
-              <tr>
-                <td>계약상태</td>
-                <td><span className="sales-pill">{hotelState.salesStage || '미접촉'}</span></td>
-              </tr>
-              <tr>
-                <td>다음 방문</td>
-                <td>{hotelState.nextVisit || '-'}</td>
-              </tr>
-              <tr>
-                <td>동선일</td>
-                <td>{hotelState.routeDate || '-'}</td>
-              </tr>
-              <tr>
-                <td>영업자</td>
-                <td>{hotelState.salesperson || '-'}</td>
-              </tr>
-              <tr>
-                <td>키오스크</td>
-                <td>{hotel.kiosk ? hotel.kioskVendor || hotel.vendor || '업체명 미입력' : '없음/미확인'}</td>
-              </tr>
-              <tr>
-                <td>RMS</td>
-                <td>{hotel.rms ? hotel.rmsVendor || '업체명 미입력' : '없음/미확인'}</td>
-              </tr>
-              <tr>
-                <td>태그</td>
-                <td>{hotelState.tags.length ? hotelState.tags.map((tag) => <span key={tag} className="tag">#{tag}</span>) : '-'}</td>
-              </tr>
-            </tbody>
-          </table>
-          <div className="section-title">영업 액션</div>
-          <div className="action-grid">
-            {ACTIONS.map((action) => (
-              <label key={action} className="action-check">
-                <input type="checkbox" checked={Boolean(hotelState.actions[action])} readOnly />
-                {action}
-              </label>
-            ))}
-          </div>
-          <div className="actions">
-            <button className="edit" onClick={() => onEdit(hotel.id)}>업장 수정</button>
-            <button className="delete" onClick={() => onDelete(hotel.id)}>업장 삭제</button>
-          </div>
-        </details>
-      )}
 
       {(!isSheet || sortedLogs.length > 0) && (
         <details className={isSheet ? 'sheet-details' : ''} open={!isSheet}>

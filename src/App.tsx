@@ -236,6 +236,7 @@ export default function App() {
   const [state, setState] = useState<HotelStateMap>(() => buildState(loadInitialHotels()));
   const [filters, setFilters] = useState<Filters>({ status: '', search: '', area: '', minRooms: '' });
   const [selectedRouteDate, setSelectedRouteDate] = useState(() => toLocalDateString(new Date()));
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState('');
   const [labelsVisible, setLabelsVisible] = useState(true);
   const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
   const [todayRouteFocusKey, setTodayRouteFocusKey] = useState(0);
@@ -328,9 +329,22 @@ export default function App() {
     [hotels, selectedRouteDate, state, todayDate]
   );
 
+  const historyHotels = useMemo(
+    () =>
+      selectedHistoryDate
+        ? hotels.filter((hotel) => {
+            const hotelState = state[hotel.id];
+            if (!hotelState) return false;
+            return hotelState.lastVisit === selectedHistoryDate || hotelState.logs.some((log) => log.date === selectedHistoryDate);
+          })
+        : [],
+    [hotels, selectedHistoryDate, state]
+  );
+
   const renderedHotels = useMemo(() => {
     const pinnedIds = new Set([
       ...routeHotels.map((hotel) => hotel.id),
+      ...historyHotels.map((hotel) => hotel.id),
       ...(selectedHotelId ? [selectedHotelId] : [])
     ]);
     const pinnedHotels = hotels.filter((hotel) => pinnedIds.has(hotel.id));
@@ -340,7 +354,7 @@ export default function App() {
       .slice(0, Math.max(0, MAX_RENDERED_HOTELS - pinnedHotels.length));
 
     return [...pinnedHotels, ...limitedVisibleHotels];
-  }, [hotels, selectedHotelId, routeHotels, visibleHotels]);
+  }, [historyHotels, hotels, selectedHotelId, routeHotels, visibleHotels]);
 
   const totalCounts = useMemo(() => {
     const counts: Record<VisitStatus | 'total', number> = { total: hotels.length, planned: 0, today: 0, visited: 0, excluded: 0 };
@@ -368,6 +382,25 @@ export default function App() {
     [hotels, state, todayDate]
   );
 
+  const historyCalendar = useMemo(() => {
+    const byDate = new globalThis.Map<string, Set<string>>();
+    for (const hotel of hotels) {
+      const hotelState = state[hotel.id];
+      if (!hotelState) continue;
+      const dates = new Set([
+        hotelState.lastVisit,
+        ...hotelState.logs.map((log) => log.date)
+      ].filter(Boolean));
+      for (const date of dates) {
+        if (!byDate.has(date)) byDate.set(date, new Set());
+        byDate.get(date)?.add(hotel.id);
+      }
+    }
+    return [...byDate.entries()]
+      .map(([date, ids]) => ({ date, visitedCount: ids.size }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [hotels, state]);
+
   const selectedHotel = selectedHotelId ? hotels.find((hotel) => hotel.id === selectedHotelId) || null : null;
   const editingHotel = editingHotelId ? hotels.find((hotel) => hotel.id === editingHotelId) || null : null;
   const showEditor = (isAdding || Boolean(editingHotel)) && !pickingLocation;
@@ -393,12 +426,14 @@ export default function App() {
       setFilters({ status: 'today', search: '', area: '', minRooms: '' });
       setSelectedHotelId(id);
       setSelectedRouteDate(todayDate);
+      setSelectedHistoryDate('');
       setMobilePanelOpen(false);
     }
   };
 
   const handleTodayRoute = () => {
     setSelectedRouteDate(todayDate);
+    setSelectedHistoryDate('');
     const todaysRoute = hotels.filter((hotel) => {
       const hotelState = state[hotel.id];
       return hotelState?.routeDate === todayDate || hotelState?.status === 'today';
@@ -580,6 +615,8 @@ export default function App() {
         areas={areas}
         selectedRouteDate={selectedRouteDate}
         routeCalendar={routeCalendar}
+        selectedHistoryDate={selectedHistoryDate}
+        historyCalendar={historyCalendar}
         isLoadingHotels={isLoadingHotels}
         labelsVisible={labelsVisible}
         canInstall={Boolean(installPrompt)}
@@ -606,6 +643,14 @@ export default function App() {
         onFiltersChange={setFilters}
         onRouteDateChange={(date) => {
           setSelectedRouteDate(date);
+          setSelectedHistoryDate('');
+          setFilters({ status: '', search: '', area: '', minRooms: '' });
+          setSelectedHotelId(null);
+          setMobilePanelOpen(false);
+          setTodayRouteFocusKey((current) => current + 1);
+        }}
+        onHistoryDateChange={(date) => {
+          setSelectedHistoryDate(date);
           setFilters({ status: '', search: '', area: '', minRooms: '' });
           setSelectedHotelId(null);
           setMobilePanelOpen(false);
@@ -641,6 +686,7 @@ export default function App() {
           setEditingHotelId(id);
           setIsAdding(false);
           setPickedLocation(null);
+          setSelectedHotelId(null);
         }}
         onDelete={handleDelete}
       />
@@ -684,6 +730,7 @@ export default function App() {
               setEditingHotelId(id);
               setIsAdding(false);
               setPickedLocation(null);
+              setSelectedHotelId(null);
             }}
             onDelete={handleDelete}
           />

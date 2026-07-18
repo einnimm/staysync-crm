@@ -17,6 +17,8 @@ interface SidebarProps {
   areas: string[];
   selectedRouteDate: string;
   routeCalendar: Array<{ date: string; routeCount: number; visitedCount: number }>;
+  selectedHistoryDate: string;
+  historyCalendar: Array<{ date: string; visitedCount: number }>;
   isLoadingHotels: boolean;
   labelsVisible: boolean;
   canInstall: boolean;
@@ -30,6 +32,7 @@ interface SidebarProps {
   onClear: () => void;
   onFiltersChange: (filters: Filters) => void;
   onRouteDateChange: (date: string) => void;
+  onHistoryDateChange: (date: string) => void;
   onLabelsChange: (visible: boolean) => void;
   onSelectHotel: (hotel: Hotel) => void;
   onTodayRoute: () => void;
@@ -45,6 +48,8 @@ export function Sidebar({
   areas,
   selectedRouteDate,
   routeCalendar,
+  selectedHistoryDate,
+  historyCalendar,
   isLoadingHotels,
   labelsVisible,
   canInstall,
@@ -58,6 +63,7 @@ export function Sidebar({
   onClear,
   onFiltersChange,
   onRouteDateChange,
+  onHistoryDateChange,
   onLabelsChange,
   onSelectHotel,
   onTodayRoute,
@@ -191,8 +197,8 @@ export function Sidebar({
           </span>
         ))}
       </div>
-      <div className="route-calendar">
-        <div className="section-title">2주 동선 달력</div>
+      <details className="calendar-panel">
+        <summary>2주 동선 달력</summary>
         <div className="route-days">
           {routeCalendar.map((day) => {
             const label = new Date(`${day.date}T00:00:00`).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' });
@@ -208,7 +214,25 @@ export function Sidebar({
             );
           })}
         </div>
-      </div>
+      </details>
+      <details className="calendar-panel" open={Boolean(selectedHistoryDate)}>
+        <summary>영업 기록 달력</summary>
+        <div className="history-days">
+          {historyCalendar.length ? historyCalendar.map((day) => {
+            const label = new Date(`${day.date}T00:00:00`).toLocaleDateString('ko-KR', { year: '2-digit', month: 'numeric', day: 'numeric', weekday: 'short' });
+            return (
+              <button
+                key={day.date}
+                className={`history-day ${selectedHistoryDate === day.date ? 'active' : ''}`}
+                onClick={() => onHistoryDateChange(day.date)}
+              >
+                <b>{label}</b>
+                <span>영업 {day.visitedCount}</span>
+              </button>
+            );
+          }) : <div className="empty compact">아직 저장된 방문일지가 없어.</div>}
+        </div>
+      </details>
       <div className="list">
         {filteredCount > hotels.length && (
           <div className="empty">
