@@ -286,6 +286,17 @@ textarea { resize: vertical; min-height: 82px; }
   background: #fafbfc;
 }
 .equipment-check input { width: auto; margin: 0; }
+.equipment-label {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e3e8f0;
+  border-radius: var(--control-radius);
+  padding: 7px;
+  font-size: 12px;
+  font-weight: 750;
+  background: #fafbfc;
+  color: #344054;
+}
 .tag { display: inline-block; background: #eef2ff; color: #3949ab; border-radius: 999px; padding: 3px 7px; margin: 2px 3px 2px 0; font-size: 10px; font-weight: 750; }
 .timeline { margin-top: 9px; border-left: 2px solid #dfe5ef; padding-left: 10px; max-height: 210px; overflow: auto; }
 .log { position: relative; padding: 0 0 10px 4px; }
@@ -409,7 +420,7 @@ textarea { resize: vertical; min-height: 82px; }
     font-weight: 750;
     text-align: center;
   }
-  .map-today-route { top: 12px; right: 12px; }
+  .map-today-route { display: none; }
   .header h1 { font-size: 18px; }
   .stat { padding: 6px 3px; }
   .stat strong { font-size: 16px; }

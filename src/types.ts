@@ -67,5 +67,7 @@ export interface Filters {
   status: VisitStatus | '';
   search: string;
   area: string;
+  kioskVendor: string;
+  rmsVendor: string;
   minRooms: string;
 }

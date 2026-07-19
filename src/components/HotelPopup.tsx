@@ -130,54 +130,52 @@ export function HotelPopup({
         ))}
       </div>
 
-      <form className="popup-form" onSubmit={(event) => {
-        event.preventDefault();
-        onSaveProfile(hotel.id, new FormData(event.currentTarget));
-      }}>
-        <div className="section-title">{isSheet ? '대표 미팅 메모' : '영업 정보 수정'}</div>
-        <label className="field">대표 미팅</label>
-        <input name="meeting" defaultValue={hotelState.meeting} placeholder="예: 월·수·금 16시 이후 / 전화 후 방문" />
-        <div className="mini-grid">
-          <div>
-            <label className="field">동선일</label>
-            <input name="routeDate" type="date" defaultValue={hotelState.routeDate} />
-          </div>
-          <div>
-            <label className="field">영업자명</label>
-            <input name="salesperson" defaultValue={hotelState.salesperson} placeholder="임봉현, 정민희" />
-          </div>
-        </div>
-        {!isSheet && (
-          <>
-            <div className="mini-grid">
-              <div>
-                <label className="field">계약상태</label>
-                <select name="salesStage" defaultValue={hotelState.salesStage}>
-                  {SALES_STAGES.map((stage) => <option key={stage}>{stage}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="field">다음 방문일</label>
-                <input name="nextVisit" type="date" defaultValue={hotelState.nextVisit} />
-              </div>
+      {!isSheet && (
+        <form className="popup-form" onSubmit={(event) => {
+          event.preventDefault();
+          onSaveProfile(hotel.id, new FormData(event.currentTarget));
+        }}>
+          <div className="section-title">영업 정보 수정</div>
+          <label className="field">대표 미팅</label>
+          <input name="meeting" defaultValue={hotelState.meeting} placeholder="예: 월·수·금 16시 이후 / 전화 후 방문" />
+          <div className="mini-grid">
+            <div>
+              <label className="field">동선일</label>
+              <input name="routeDate" type="date" defaultValue={hotelState.routeDate} />
             </div>
-            <label className="field">진행 액션</label>
-            <div className="action-grid">
-              {ACTIONS.map((action) => (
-                <label key={action} className="action-check">
-                  <input name="actions" type="checkbox" value={action} defaultChecked={Boolean(hotelState.actions[action])} />
-                  {action}
-                </label>
-              ))}
+            <div>
+              <label className="field">영업자명</label>
+              <input name="salesperson" defaultValue={hotelState.salesperson} placeholder="임봉현, 정민희" />
             </div>
-            <label className="field">태그</label>
-            <input name="tags" defaultValue={hotelState.tags.join(', ')} placeholder="벤디트, 대표미팅, 재방문" />
-          </>
-        )}
-        <label className="field">요약 메모</label>
-        <textarea name="memo" className="compact" defaultValue={hotelState.memo} placeholder="현재 핵심 상황만 간단히" />
-        <button className="save full" type="submit">{isSheet ? '저장' : '영업 정보 저장'}</button>
-      </form>
+          </div>
+          <div className="mini-grid">
+            <div>
+              <label className="field">계약상태</label>
+              <select name="salesStage" defaultValue={hotelState.salesStage}>
+                {SALES_STAGES.map((stage) => <option key={stage}>{stage}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="field">다음 방문일</label>
+              <input name="nextVisit" type="date" defaultValue={hotelState.nextVisit} />
+            </div>
+          </div>
+          <label className="field">진행 액션</label>
+          <div className="action-grid">
+            {ACTIONS.map((action) => (
+              <label key={action} className="action-check">
+                <input name="actions" type="checkbox" value={action} defaultChecked={Boolean(hotelState.actions[action])} />
+                {action}
+              </label>
+            ))}
+          </div>
+          <label className="field">태그</label>
+          <input name="tags" defaultValue={hotelState.tags.join(', ')} placeholder="벤디트, 대표미팅, 재방문" />
+          <label className="field">요약 메모</label>
+          <textarea name="memo" className="compact" defaultValue={hotelState.memo} placeholder="현재 핵심 상황만 간단히" />
+          <button className="save full" type="submit">영업 정보 저장</button>
+        </form>
+      )}
 
       <form className="popup-form" onSubmit={(event) => {
         event.preventDefault();

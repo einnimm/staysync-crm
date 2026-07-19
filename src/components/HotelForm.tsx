@@ -24,7 +24,6 @@ export interface EditorDraft {
   vendor: string;
   kiosk: boolean;
   kioskVendor: string;
-  rms: boolean;
   rmsVendor: string;
   meeting: string;
   salesperson: string;
@@ -63,7 +62,6 @@ function createDraft(
     vendor: hotel?.vendor || '',
     kiosk: Boolean(hotel?.kiosk),
     kioskVendor: hotel?.kioskVendor || '',
-    rms: Boolean(hotel?.rms),
     rmsVendor: hotel?.rmsVendor || '',
     meeting: hotelState?.meeting || '',
     salesperson: hotelState?.salesperson || '',
@@ -106,7 +104,7 @@ export function HotelForm({ hotel, hotelState, mapCenter, pickedLocation, onSave
             note: draft.note.trim(),
             vendor: draft.vendor.trim() || '미확인',
             kioskVendor: draft.kiosk ? draft.kioskVendor.trim() : '',
-            rmsVendor: draft.rms ? draft.rmsVendor.trim() : '',
+            rmsVendor: draft.rmsVendor.trim(),
             meeting: draft.meeting.trim(),
             salesperson: draft.salesperson.trim(),
             tags: tagText.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean)
@@ -175,17 +173,11 @@ export function HotelForm({ hotel, hotelState, mapCenter, pickedLocation, onSave
               if (event.target.value.trim()) update('kiosk', true);
             }}
           />
-          <label className="equipment-check">
-            <input type="checkbox" checked={draft.rms} onChange={(event) => update('rms', event.target.checked)} />
-            RMS 있음
-          </label>
+          <div className="equipment-label">RMS 업체</div>
           <input
             value={draft.rmsVendor}
-            placeholder="RMS 업체명"
-            onChange={(event) => {
-              update('rmsVendor', event.target.value);
-              if (event.target.value.trim()) update('rms', true);
-            }}
+            placeholder="예: 헤르메스, 시리얼, TMR"
+            onChange={(event) => update('rmsVendor', event.target.value)}
           />
         </div>
         <div className="row">

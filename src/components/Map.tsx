@@ -19,6 +19,7 @@ const STATUS_COLORS: Record<VisitStatus, string> = {
 
 interface MapProps {
   hotels: Hotel[];
+  focusHotels: Hotel[];
   todayHotels: Hotel[];
   state: HotelStateMap;
   labelsVisible: boolean;
@@ -97,6 +98,7 @@ function LocationPicker({ enabled, onPickedLocation }: { enabled: boolean; onPic
 
 export function Map({
   hotels,
+  focusHotels,
   todayHotels,
   state,
   labelsVisible,
@@ -119,7 +121,7 @@ export function Map({
       <MapContainer center={[35.22, 128.82]} zoom={10} className="map">
         <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
         <MapFocus
-          hotels={hotels}
+          hotels={focusHotels}
           todayHotels={todayHotels}
           selectedHotelId={selectedHotelId}
           todayRouteFocusKey={todayRouteFocusKey}

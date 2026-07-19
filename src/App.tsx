@@ -10,6 +10,7 @@ import type { ActionMap, Filters, Hotel, HotelState, HotelStateMap, SalesStage, 
 const ACTIONS = ['명함 전달', '직원 설명 완료', '대표 미팅 완료', '견적 전달', '프로모션 안내', '계약서 전달', '도입 완료'];
 const MAX_RENDERED_HOTELS = 300;
 const ROUTE_DAYS = 14;
+const EMPTY_FILTERS: Filters = { status: '', search: '', area: '', kioskVendor: '', rmsVendor: '', minRooms: '' };
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -41,16 +42,18 @@ function addDays(date: Date, days: number): Date {
 
 function normalizeHotel(hotel: Partial<Hotel>): Hotel {
   const rooms = hotel.rooms as number | string | null | undefined;
+  const vendor = hotel.vendor || '미확인';
+  const kioskVendor = hotel.kioskVendor || inferVendor(vendor, ['벤디트', '야놀', '시리얼', '아이크루']);
   return {
     id: hotel.id || newId(),
     area: hotel.area || '',
     name: hotel.name || '이름 없음',
     rooms: rooms === null || rooms === undefined || rooms === '' ? null : Number(rooms),
     note: hotel.note || '',
-    vendor: hotel.vendor || '미확인',
-    kiosk: Boolean(hotel.kiosk),
-    kioskVendor: hotel.kioskVendor || (hotel.kiosk && hotel.vendor !== '미확인' ? hotel.vendor : ''),
-    rms: Boolean(hotel.rms),
+    vendor,
+    kiosk: Boolean(hotel.kiosk || kioskVendor),
+    kioskVendor,
+    rms: Boolean(hotel.rms || hotel.rmsVendor),
     rmsVendor: hotel.rmsVendor || '',
     address: hotel.address || '정확한 주소 확인 필요',
     lat: Number(hotel.lat) || 35.22,
@@ -67,6 +70,15 @@ function normalizeHotel(hotel: Partial<Hotel>): Hotel {
     initialSalesStage: hotel.initialSalesStage,
     initialTags: Array.isArray(hotel.initialTags) ? hotel.initialTags : []
   };
+}
+
+function inferVendor(value: string, candidates: string[]): string {
+  const normalized = value.replace(/\s/g, '').toLowerCase();
+  return candidates.find((candidate) => normalized.includes(candidate.replace(/\s/g, '').toLowerCase())) || '';
+}
+
+function isPresent(value: string | undefined): value is string {
+  return Boolean(value);
 }
 
 function createInitialState(hotel: Hotel, saved?: Partial<HotelState>): HotelState {
@@ -183,8 +195,38 @@ function matchesFilters(hotel: Hotel, state: HotelStateMap, filters: Filters) {
   return (
     (!filters.search.trim() || haystack.includes(filters.search.trim().toLowerCase())) &&
     (!filters.area || salesRegion === filters.area) &&
+    (!filters.kioskVendor || (filters.kioskVendor === '없음/미확인' ? !hotel.kioskVendor : hotel.kioskVendor === filters.kioskVendor)) &&
+    (!filters.rmsVendor || (filters.rmsVendor === '미확인' ? !hotel.rmsVendor : hotel.rmsVendor === filters.rmsVendor)) &&
     (!minRooms || (hotel.rooms || 0) >= minRooms)
   );
+}
+
+function shortProvince(value: string): string {
+  const province = value.replace(/특별자치도|특별자치시|광역시|특별시|자치도/g, '');
+  const aliases: Record<string, string> = {
+    서울: '서울',
+    부산: '부산',
+    대구: '대구',
+    인천: '인천',
+    광주: '광주',
+    대전: '대전',
+    울산: '울산',
+    세종: '세종',
+    경기: '경기',
+    강원: '강원',
+    충청북도: '충북',
+    충청남도: '충남',
+    전라북도: '전북',
+    전라남도: '전남',
+    경상북도: '경북',
+    경상남도: '경남',
+    제주: '제주'
+  };
+  return aliases[province] || province.replace(/[도시]$/, '') || value;
+}
+
+function compactDistrict(value: string): string {
+  return value.replace(/(특례시|시|군|구)$/g, '');
 }
 
 function getSalesRegion(hotel: Hotel): string {
@@ -228,13 +270,31 @@ function getSalesRegion(hotel: Hotel): string {
   };
 
   if (first === '두동') return '진해';
-  return regionMap[first] || first || '기타';
+  if (regionMap[first]) return regionMap[first];
+
+  const addressParts = hotel.address.trim().split(/\s+/).filter(Boolean);
+  if (addressParts.length >= 2) {
+    const province = shortProvince(addressParts[0]);
+    const city = addressParts[1];
+    const district = addressParts[2] || '';
+    if (province === '부산') return district ? `부산 ${compactDistrict(city)}` : `부산 ${compactDistrict(city)}`;
+    if (['서울', '대구', '인천', '광주', '대전', '울산'].includes(province)) return `${province} ${compactDistrict(city)}`;
+    if (district.endsWith('구') && city.endsWith('시')) return `${compactDistrict(city)} ${compactDistrict(district)}`;
+    return `${province} ${compactDistrict(city)}`;
+  }
+
+  if (area.includes(' ')) {
+    const [province, city] = area.split(/\s+/);
+    return `${shortProvince(province)} ${compactDistrict(city)}`;
+  }
+
+  return first || '기타';
 }
 
 export default function App() {
   const [hotels, setHotels] = useState<Hotel[]>(() => loadInitialHotels());
   const [state, setState] = useState<HotelStateMap>(() => buildState(loadInitialHotels()));
-  const [filters, setFilters] = useState<Filters>({ status: '', search: '', area: '', minRooms: '' });
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [selectedRouteDate, setSelectedRouteDate] = useState(() => toLocalDateString(new Date()));
   const [selectedHistoryDate, setSelectedHistoryDate] = useState('');
   const [labelsVisible, setLabelsVisible] = useState(true);
@@ -298,7 +358,7 @@ export default function App() {
 
   const shouldShowFilteredResults = useMemo(
     () =>
-      Boolean(filters.search.trim() || filters.area || filters.minRooms) ||
+      Boolean(filters.search.trim() || filters.area || filters.kioskVendor || filters.rmsVendor || filters.minRooms) ||
       filters.status === 'today' ||
       filters.status === 'visited' ||
       filters.status === 'excluded',
@@ -314,6 +374,16 @@ export default function App() {
 
   const areas = useMemo(
     () => [...new Set(hotels.map((hotel) => getSalesRegion(hotel)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')),
+    [hotels]
+  );
+
+  const kioskVendors = useMemo(
+    () => [...new Set(hotels.map((hotel) => hotel.kioskVendor).filter(isPresent))].sort((a, b) => a.localeCompare(b, 'ko')),
+    [hotels]
+  );
+
+  const rmsVendors = useMemo(
+    () => [...new Set(hotels.map((hotel) => hotel.rmsVendor).filter(isPresent))].sort((a, b) => a.localeCompare(b, 'ko')),
     [hotels]
   );
 
@@ -355,6 +425,13 @@ export default function App() {
 
     return [...pinnedHotels, ...limitedVisibleHotels];
   }, [historyHotels, hotels, selectedHotelId, routeHotels, visibleHotels]);
+
+  const mapFocusHotels = useMemo(() => {
+    if (selectedHotelId) return renderedHotels.filter((hotel) => hotel.id === selectedHotelId);
+    if (visibleHotels.length) return visibleHotels.slice(0, MAX_RENDERED_HOTELS);
+    if (historyHotels.length) return historyHotels;
+    return routeHotels;
+  }, [historyHotels, renderedHotels, routeHotels, selectedHotelId, visibleHotels]);
 
   const totalCounts = useMemo(() => {
     const counts: Record<VisitStatus | 'total', number> = { total: hotels.length, planned: 0, today: 0, visited: 0, excluded: 0 };
@@ -423,7 +500,7 @@ export default function App() {
       routeDate: status === 'today' ? todayDate : current.routeDate
     }));
     if (status === 'today') {
-      setFilters({ status: 'today', search: '', area: '', minRooms: '' });
+      setFilters({ ...EMPTY_FILTERS, status: 'today' });
       setSelectedHotelId(id);
       setSelectedRouteDate(todayDate);
       setSelectedHistoryDate('');
@@ -442,7 +519,7 @@ export default function App() {
       alert('오늘 동선으로 지정한 업장이 없어.');
       return;
     }
-    setFilters({ status: 'today', search: '', area: '', minRooms: '' });
+    setFilters({ ...EMPTY_FILTERS, status: 'today' });
     setSelectedHotelId(null);
     setMobilePanelOpen(false);
     setTodayRouteFocusKey((current) => current + 1);
@@ -520,7 +597,7 @@ export default function App() {
               vendor: draft.vendor,
               kiosk: draft.kiosk,
               kioskVendor: draft.kioskVendor,
-              rms: draft.rms,
+              rms: Boolean(draft.rmsVendor),
               rmsVendor: draft.rmsVendor
             }
           : hotel
@@ -590,7 +667,7 @@ export default function App() {
       } else {
         throw new Error('Invalid backup format');
       }
-      setFilters({ status: '', search: '', area: '', minRooms: '' });
+      setFilters(EMPTY_FILTERS);
       alert('백업을 복원했어.');
     } catch {
       alert('올바른 영업지도 백업 파일이 아니야.');
@@ -613,6 +690,8 @@ export default function App() {
         filteredCount={visibleHotels.length}
         filters={filters}
         areas={areas}
+        kioskVendors={kioskVendors}
+        rmsVendors={rmsVendors}
         selectedRouteDate={selectedRouteDate}
         routeCalendar={routeCalendar}
         selectedHistoryDate={selectedHistoryDate}
@@ -644,14 +723,14 @@ export default function App() {
         onRouteDateChange={(date) => {
           setSelectedRouteDate(date);
           setSelectedHistoryDate('');
-          setFilters({ status: '', search: '', area: '', minRooms: '' });
+          setFilters(EMPTY_FILTERS);
           setSelectedHotelId(null);
           setMobilePanelOpen(false);
           setTodayRouteFocusKey((current) => current + 1);
         }}
         onHistoryDateChange={(date) => {
           setSelectedHistoryDate(date);
-          setFilters({ status: '', search: '', area: '', minRooms: '' });
+          setFilters(EMPTY_FILTERS);
           setSelectedHotelId(null);
           setMobilePanelOpen(false);
           setTodayRouteFocusKey((current) => current + 1);
@@ -666,6 +745,7 @@ export default function App() {
       />
       <Map
         hotels={renderedHotels}
+        focusHotels={mapFocusHotels}
         todayHotels={routeHotels}
         state={state}
         labelsVisible={labelsVisible}

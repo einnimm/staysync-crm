@@ -15,6 +15,8 @@ interface SidebarProps {
   filteredCount: number;
   filters: Filters;
   areas: string[];
+  kioskVendors: string[];
+  rmsVendors: string[];
   selectedRouteDate: string;
   routeCalendar: Array<{ date: string; routeCount: number; visitedCount: number }>;
   selectedHistoryDate: string;
@@ -46,6 +48,8 @@ export function Sidebar({
   filteredCount,
   filters,
   areas,
+  kioskVendors,
+  rmsVendors,
   selectedRouteDate,
   routeCalendar,
   selectedHistoryDate,
@@ -112,15 +116,20 @@ export function Sidebar({
         <button className="add" onClick={onAdd}>
           업장 추가
         </button>
-        <button onClick={onExportAll}>전체 백업</button>
-        <button className="file-label" onClick={() => importInputRef.current?.click()}>
-          백업 복원
-        </button>
-        <button onClick={onExportHotels}>업장목록 내보내기</button>
-        <button className="danger" onClick={onClear}>
-          기록 초기화
-        </button>
       </div>
+      <details className="calendar-panel utility-panel">
+        <summary>백업·관리</summary>
+        <div className="toolbar">
+          <button onClick={onExportAll}>전체 백업</button>
+          <button className="file-label" onClick={() => importInputRef.current?.click()}>
+            백업 복원
+          </button>
+          <button onClick={onExportHotels}>업장목록 내보내기</button>
+          <button className="danger" onClick={onClear}>
+            기록 초기화
+          </button>
+        </div>
+      </details>
       <input
         ref={importInputRef}
         type="file"
@@ -179,13 +188,39 @@ export function Sidebar({
           />
         </div>
       </div>
+      <div className="row">
+        <div>
+          <label className="field">키오스크 업체</label>
+          <select value={filters.kioskVendor} onChange={(event) => updateFilter({ kioskVendor: event.target.value })}>
+            <option value="">전체</option>
+            <option value="없음/미확인">없음/미확인</option>
+            {kioskVendors.map((vendor) => (
+              <option key={vendor} value={vendor}>
+                {vendor}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="field">RMS 업체</label>
+          <select value={filters.rmsVendor} onChange={(event) => updateFilter({ rmsVendor: event.target.value })}>
+            <option value="">전체</option>
+            <option value="미확인">미확인</option>
+            {rmsVendors.map((vendor) => (
+              <option key={vendor} value={vendor}>
+                {vendor}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
       <label className="check">
         <input type="checkbox" checked={labelsVisible} onChange={(event) => onLabelsChange(event.target.checked)} />핀 위
         업장명 표시
       </label>
       <button
         id="reset"
-        onClick={() => onFiltersChange({ status: '', search: '', area: '', minRooms: '' })}
+        onClick={() => onFiltersChange({ status: '', search: '', area: '', kioskVendor: '', rmsVendor: '', minRooms: '' })}
       >
         필터 초기화
       </button>
