@@ -26,6 +26,7 @@ interface MapProps {
   selectedHotelId: string | null;
   todayRouteFocusKey: number;
   pickingLocation: boolean;
+  onMapFocus: () => void;
   onSelectHotel: (hotel: Hotel) => void;
   onPickedLocation: (lat: number, lon: number) => void;
   onTodayRoute: () => void;
@@ -96,6 +97,15 @@ function LocationPicker({ enabled, onPickedLocation }: { enabled: boolean; onPic
   return null;
 }
 
+function MapInteraction({ enabled, onMapFocus }: { enabled: boolean; onMapFocus: () => void }) {
+  useMapEvents({
+    click() {
+      if (enabled) onMapFocus();
+    }
+  });
+  return null;
+}
+
 export function Map({
   hotels,
   focusHotels,
@@ -105,6 +115,7 @@ export function Map({
   selectedHotelId,
   todayRouteFocusKey,
   pickingLocation,
+  onMapFocus,
   onSelectHotel,
   onPickedLocation,
   onTodayRoute,
@@ -127,6 +138,7 @@ export function Map({
           todayRouteFocusKey={todayRouteFocusKey}
         />
         <LocationPicker enabled={pickingLocation} onPickedLocation={onPickedLocation} />
+        <MapInteraction enabled={!pickingLocation} onMapFocus={onMapFocus} />
         {[...hotels].sort((a, b) => Number(state[a.id]?.status === 'today') - Number(state[b.id]?.status === 'today')).map((hotel) => {
           const hotelState = state[hotel.id];
           if (!hotelState) return null;
@@ -142,7 +154,12 @@ export function Map({
                 fillOpacity: 0.95,
                 className: hotelState.status === 'today' ? 'today-pin' : ''
               }}
-              eventHandlers={{ click: () => onSelectHotel(hotel) }}
+              eventHandlers={{
+                click: (event) => {
+                  event.originalEvent.stopPropagation();
+                  onSelectHotel(hotel);
+                }
+              }}
             >
               {labelsVisible && (
                 <Tooltip permanent direction="top" className="hotel-label" offset={[0, -6]}>

@@ -299,6 +299,7 @@ export default function App() {
   const [selectedHistoryDate, setSelectedHistoryDate] = useState('');
   const [labelsVisible, setLabelsVisible] = useState(true);
   const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
+  const [mobileMapExpanded, setMobileMapExpanded] = useState(false);
   const [todayRouteFocusKey, setTodayRouteFocusKey] = useState(0);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [editingHotelId, setEditingHotelId] = useState<string | null>(null);
@@ -502,6 +503,7 @@ export default function App() {
     if (status === 'today') {
       setFilters({ ...EMPTY_FILTERS, status: 'today' });
       setSelectedHotelId(id);
+      setMobileMapExpanded(false);
       setSelectedRouteDate(todayDate);
       setSelectedHistoryDate('');
       setMobilePanelOpen(false);
@@ -637,6 +639,7 @@ export default function App() {
       };
       commit(nextHotels, nextState);
       setSelectedHotelId(id);
+      setMobileMapExpanded(false);
     }
     setIsAdding(false);
     setEditingHotelId(null);
@@ -725,6 +728,7 @@ export default function App() {
           setSelectedHistoryDate('');
           setFilters(EMPTY_FILTERS);
           setSelectedHotelId(null);
+          setMobileMapExpanded(true);
           setMobilePanelOpen(false);
           setTodayRouteFocusKey((current) => current + 1);
         }}
@@ -732,12 +736,14 @@ export default function App() {
           setSelectedHistoryDate(date);
           setFilters(EMPTY_FILTERS);
           setSelectedHotelId(null);
+          setMobileMapExpanded(true);
           setMobilePanelOpen(false);
           setTodayRouteFocusKey((current) => current + 1);
         }}
         onLabelsChange={setLabelsVisible}
         onSelectHotel={(hotel) => {
           setSelectedHotelId(hotel.id);
+          setMobileMapExpanded(false);
           setMobilePanelOpen(false);
         }}
         onTodayRoute={handleTodayRoute}
@@ -752,7 +758,11 @@ export default function App() {
         selectedHotelId={selectedHotelId}
         todayRouteFocusKey={todayRouteFocusKey}
         pickingLocation={pickingLocation}
-        onSelectHotel={(hotel) => setSelectedHotelId(hotel.id)}
+        onMapFocus={() => setMobileMapExpanded(true)}
+        onSelectHotel={(hotel) => {
+          setSelectedHotelId(hotel.id);
+          setMobileMapExpanded(false);
+        }}
         onTodayRoute={handleTodayRoute}
         onPickedLocation={(lat, lon) => {
           setPickedLocation({ lat, lon });
@@ -788,7 +798,12 @@ export default function App() {
         />
       )}
       {selectedHotel && state[selectedHotel.id] && (
-        <div className="mobile-sheet" role="dialog" aria-label="업장 상세">
+        <div
+          className={`mobile-sheet ${mobileMapExpanded ? 'map-expanded' : 'info-expanded'}`}
+          role="dialog"
+          aria-label="업장 상세"
+          onClick={() => setMobileMapExpanded(false)}
+        >
           <HotelPopup
             hotel={selectedHotel}
             hotelState={state[selectedHotel.id]}
