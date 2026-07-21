@@ -10,7 +10,51 @@ import type { ActionMap, AreaGroup, Filters, Hotel, HotelState, HotelStateMap, S
 const ACTIONS = ['명함 전달', '직원 설명 완료', '대표 미팅 완료', '견적 전달', '프로모션 안내', '계약서 전달', '도입 완료'];
 const MAX_RENDERED_HOTELS = 300;
 const ROUTE_DAYS = 14;
-const EMPTY_FILTERS: Filters = { status: '', search: '', area: '', kioskVendor: '', rmsVendor: '', minRooms: '' };
+const EMPTY_FILTERS: Filters = { status: '', search: '', area: '', kioskVendor: '', rmsVendor: '' };
+const SALESPEOPLE_2026_07_20 = '임봉현, 정민희';
+const VISIT_RECORDS_2026_07_20: Record<string, {
+  note: string;
+  memo: string;
+  nextVisit?: string;
+  routeDate?: string;
+  meeting?: string;
+  tags?: string[];
+}> = {
+  'hotel-016': {
+    note: '7/20 영업 방문. 수요일 15시 이후 재방문 가능.',
+    memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n수요일 15시 이후 재방문 가능.',
+    nextVisit: '2026-07-22',
+    routeDate: '2026-07-22',
+    meeting: '수요일 15시 이후',
+    tags: ['재방문']
+  },
+  'hotel-20260720-gung': {
+    note: '7/20 영업 방문. 수요일 15시 재방문 가능.',
+    memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n수요일 15시 재방문 가능.',
+    nextVisit: '2026-07-22',
+    routeDate: '2026-07-22',
+    meeting: '수요일 15시',
+    tags: ['재방문']
+  },
+  'hotel-004': {
+    note: '7/20 영업 방문. 오전 11시쯤 방문 가능.',
+    memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n오전 11시쯤 방문 가능.',
+    meeting: '오전 11시쯤',
+    tags: ['재방문']
+  },
+  'hotel-179': {
+    note: '7/20 영업 방문. 아고다 관리가 힘들어 후회 중이라고 함. 프로그램 관심은 크지 않으나 해외채널 관리 설명은 남자 대표에게 한 번 진행하면 좋겠음. 남자 대표는 저녁 시간대.',
+    memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n아고다 관리가 힘들어 후회 중이라고 함.\n프로그램 관심은 크지 않지만 해외채널 관리 설명은 남자 대표에게 한 번 진행하면 좋겠음.\n남자 대표는 저녁 시간대.',
+    meeting: '남자 대표 저녁 시간대',
+    tags: ['해외채널', '아고다', '재방문']
+  },
+  'hotel-027': {
+    note: '7/20 영업 방문. 미리 연락 후 방문 필요.',
+    memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n미리 연락 후 방문 필요.',
+    meeting: '미리 연락 후 방문',
+    tags: ['재방문']
+  }
+};
 
 interface ViewportBounds {
   north: number;
@@ -136,7 +180,42 @@ function createInitialState(hotel: Hotel, saved?: Partial<HotelState>): HotelSta
     ];
   }
 
-  return merged;
+  return applyVisitRecords(hotel, merged);
+}
+
+function applyVisitRecords(hotel: Hotel, state: HotelState): HotelState {
+  const record = VISIT_RECORDS_2026_07_20[hotel.id];
+  if (!record) return state;
+
+  const logId = `visit-2026-07-20-${hotel.id}`;
+  const logs = state.logs.some((log) => log.id === logId)
+    ? state.logs
+    : [
+        ...state.logs,
+        {
+          id: logId,
+          date: '2026-07-20',
+          type: '영업 방문',
+          note: record.note,
+          createdAt: '2026-07-20T09:00:00.000+09:00'
+        }
+      ];
+
+  const tags = [...new Set([...(state.tags || []), ...(record.tags || [])])];
+  return {
+    ...state,
+    status: state.status === 'excluded' ? state.status : 'visited',
+    memo: record.memo,
+    visitCount: Math.max(state.visitCount || 0, logs.length),
+    lastVisit: ['2026-07-20', state.lastVisit].filter(Boolean).sort().pop() || '2026-07-20',
+    nextVisit: record.nextVisit || state.nextVisit,
+    routeDate: record.routeDate || state.routeDate,
+    meeting: record.meeting || state.meeting,
+    salesperson: state.salesperson || SALESPEOPLE_2026_07_20,
+    salesStage: state.salesStage === '미접촉' ? '상담중' : state.salesStage,
+    tags,
+    logs
+  };
 }
 
 function loadInitialHotels(): Hotel[] {
@@ -183,7 +262,6 @@ function downloadJSON(name: string, value: unknown) {
 function matchesFilters(hotel: Hotel, state: HotelStateMap, filters: Filters) {
   const hotelState = state[hotel.id];
   if (!hotelState || (filters.status && hotelState.status !== filters.status)) return false;
-  const minRooms = Number(filters.minRooms || 0);
   const salesRegion = getSalesRegion(hotel);
   const logText = hotelState.logs.map((log) => `${log.date} ${log.type} ${log.note}`).join(' ');
   const haystack = [
@@ -213,8 +291,7 @@ function matchesFilters(hotel: Hotel, state: HotelStateMap, filters: Filters) {
     (!search || haystack.includes(search) || compactHaystack.includes(compactSearch)) &&
     (!filters.area || salesRegion === filters.area) &&
     (!filters.kioskVendor || (filters.kioskVendor === '없음/미확인' ? !hotel.kioskVendor : hotel.kioskVendor === filters.kioskVendor)) &&
-    (!filters.rmsVendor || (filters.rmsVendor === '미확인' ? !hotel.rmsVendor : hotel.rmsVendor === filters.rmsVendor)) &&
-    (!minRooms || (hotel.rooms || 0) >= minRooms)
+    (!filters.rmsVendor || (filters.rmsVendor === '미확인' ? !hotel.rmsVendor : hotel.rmsVendor === filters.rmsVendor))
   );
 }
 
@@ -358,6 +435,7 @@ export default function App() {
   const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
   const [mobileMapExpanded, setMobileMapExpanded] = useState(false);
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
+  const [pendingRouteHotelId, setPendingRouteHotelId] = useState<string | null>(null);
   const [todayRouteFocusKey, setTodayRouteFocusKey] = useState(0);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [editingHotelId, setEditingHotelId] = useState<string | null>(null);
@@ -417,7 +495,7 @@ export default function App() {
 
   const shouldShowFilteredResults = useMemo(
     () =>
-      Boolean(filters.search.trim() || filters.area || filters.kioskVendor || filters.rmsVendor || filters.minRooms) ||
+      Boolean(filters.search.trim() || filters.area || filters.kioskVendor || filters.rmsVendor) ||
       filters.status === 'planned' ||
       filters.status === 'today' ||
       filters.status === 'visited' ||
@@ -553,6 +631,7 @@ export default function App() {
 
   const selectedHotel = selectedHotelId ? hotels.find((hotel) => hotel.id === selectedHotelId) || null : null;
   const editingHotel = editingHotelId ? hotels.find((hotel) => hotel.id === editingHotelId) || null : null;
+  const pendingRouteHotel = pendingRouteHotelId ? hotels.find((hotel) => hotel.id === pendingRouteHotelId) || null : null;
   const showEditor = (isAdding || Boolean(editingHotel)) && !pickingLocation;
 
   const commit = (nextHotels: Hotel[], nextState: HotelStateMap) => {
@@ -567,6 +646,11 @@ export default function App() {
   };
 
   const handleStatusChange = (id: string, status: VisitStatus) => {
+    if (status === 'planned') {
+      setPendingRouteHotelId(id);
+      return;
+    }
+
     updateStateForHotel(id, (current) => ({
       ...current,
       status,
@@ -580,6 +664,23 @@ export default function App() {
       setSelectedHistoryDate('');
       setMobilePanelOpen(false);
     }
+  };
+
+  const handleRouteDateAssign = (id: string, date: string) => {
+    updateStateForHotel(id, (current) => ({
+      ...current,
+      status: 'planned',
+      routeDate: date,
+      nextVisit: date
+    }));
+    setPendingRouteHotelId(null);
+    setSelectedRouteDate(date);
+    setSelectedHistoryDate('');
+    setFilters({ ...EMPTY_FILTERS, status: 'planned' });
+    setSelectedHotelId(id);
+    setMobileMapExpanded(false);
+    setMobilePanelOpen(false);
+    setTodayRouteFocusKey((current) => current + 1);
   };
 
   const handleTodayRoute = () => {
@@ -873,6 +974,41 @@ export default function App() {
           onPickLocation={() => setPickingLocation(true)}
           key={`${editingHotel?.id || 'new'}-${pickedLocation?.lat || 'x'}-${pickedLocation?.lon || 'x'}`}
         />
+      )}
+      {pendingRouteHotel && (
+        <div className="modal-wrap" role="dialog" aria-label="방문 예정 동선일 선택">
+          <div className="modal route-modal">
+            <h2>방문 예정일 선택</h2>
+            <div className="hint">
+              {pendingRouteHotel.area} {pendingRouteHotel.name}을(를) 넣을 동선 날짜를 골라줘.
+            </div>
+            <div className="route-pick-grid">
+              {routeCalendar.map((day) => {
+                const label = new Date(`${day.date}T00:00:00`).toLocaleDateString('ko-KR', {
+                  month: 'numeric',
+                  day: 'numeric',
+                  weekday: 'short'
+                });
+                return (
+                  <button
+                    key={day.date}
+                    className="route-pick-day"
+                    type="button"
+                    onClick={() => handleRouteDateAssign(pendingRouteHotel.id, day.date)}
+                  >
+                    <b>{label}</b>
+                    <span>동선 {day.routeCount} · 방문 {day.visitedCount}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="modal-actions single">
+              <button className="cancel" type="button" onClick={() => setPendingRouteHotelId(null)}>
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {selectedHotel && state[selectedHotel.id] && (
         <div

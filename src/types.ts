@@ -69,7 +69,6 @@ export interface Filters {
   area: string;
   kioskVendor: string;
   rmsVendor: string;
-  minRooms: string;
 }
 
 export interface AreaGroup {

@@ -338,9 +338,41 @@ textarea { resize: vertical; min-height: 82px; }
 .modal h2 { margin: 0 0 4px; font-size: 19px; }
 .modal .hint { font-size: 11px; color: var(--muted); line-height: 1.45; margin-bottom: 9px; }
 .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
+.modal-actions.single { grid-template-columns: 1fr; }
 .modal-actions button { border: 0; border-radius: 9px; padding: 10px; font-weight: 800; }
 .cancel { background: #eef2f6; color: #344054; }
 .confirm { background: var(--ink); color: #fff; }
+.route-modal { width: min(520px, 100%); }
+.route-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--control-gap);
+  margin-top: 12px;
+  max-height: 52vh;
+  overflow: auto;
+}
+.route-pick-day {
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  min-height: 52px;
+  padding: 9px;
+  background: #fff;
+  text-align: left;
+}
+.route-pick-day b {
+  display: block;
+  font-size: 13px;
+}
+.route-pick-day span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.route-pick-day:hover {
+  border-color: #f2c94c;
+  background: #fff7d6;
+}
 .pick-button {
   margin-top: 8px;
   width: 100%;

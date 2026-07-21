@@ -88,7 +88,7 @@ export function Sidebar({
     <aside className={`sidebar ${isMobileOpen ? 'open' : ''}`}>
       <div className="header">
         <h1>숙박업 영업지도</h1>
-        <span className="version">v2.2.1</span>
+        <span className="version">v2.2.2</span>
       </div>
       <div className="sub">STAYSYNC Sales CRM · 대표 미팅과 방문일지를 현재 기기에 자동 저장</div>
       {isLoadingHotels && <div className="sub">전국 숙소 DB 불러오는 중...</div>}
@@ -165,33 +165,19 @@ export function Sidebar({
         placeholder="업장명, 지역, 대표 미팅, 계약상태, 태그, 방문일지"
         onChange={(event) => updateFilter({ search: event.target.value })}
       />
-      <div className="row">
-        <div>
-          <label className="field">영업권역</label>
-          <select value={filters.area} onChange={(event) => updateFilter({ area: event.target.value })}>
-            <option value="">전체 권역</option>
-            {areaGroups.map((group) => (
-              <optgroup key={group.province} label={group.province}>
-                {group.regions.map((area) => (
-                  <option key={area} value={area}>
-                    {area}
-                  </option>
-                ))}
-              </optgroup>
+      <label className="field">영업권역</label>
+      <select value={filters.area} onChange={(event) => updateFilter({ area: event.target.value })}>
+        <option value="">전체 권역</option>
+        {areaGroups.map((group) => (
+          <optgroup key={group.province} label={group.province}>
+            {group.regions.map((area) => (
+              <option key={area} value={area}>
+                {area}
+              </option>
             ))}
-          </select>
-        </div>
-        <div>
-          <label className="field">최소 객실</label>
-          <input
-            value={filters.minRooms}
-            type="number"
-            min="0"
-            placeholder="0"
-            onChange={(event) => updateFilter({ minRooms: event.target.value })}
-          />
-        </div>
-      </div>
+          </optgroup>
+        ))}
+      </select>
       <div className="row">
         <div>
           <label className="field">키오스크 업체</label>
@@ -224,7 +210,7 @@ export function Sidebar({
       </label>
       <button
         id="reset"
-        onClick={() => onFiltersChange({ status: '', search: '', area: '', kioskVendor: '', rmsVendor: '', minRooms: '' })}
+        onClick={() => onFiltersChange({ status: '', search: '', area: '', kioskVendor: '', rmsVendor: '' })}
       >
         필터 초기화
       </button>
