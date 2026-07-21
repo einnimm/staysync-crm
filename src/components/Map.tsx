@@ -25,6 +25,7 @@ interface MapProps {
   labelsVisible: boolean;
   selectedHotelId: string | null;
   todayRouteFocusKey: number;
+  mapFocusKey: number;
   pickingLocation: boolean;
   onMapFocus: () => void;
   onViewportChange: (bounds: { north: number; south: number; east: number; west: number }) => void;
@@ -43,15 +44,19 @@ function MapFocus({
   hotels,
   todayHotels,
   selectedHotelId,
-  todayRouteFocusKey
+  todayRouteFocusKey,
+  mapFocusKey
 }: {
   hotels: Hotel[];
   todayHotels: Hotel[];
   selectedHotelId: string | null;
   todayRouteFocusKey: number;
+  mapFocusKey: number;
 }) {
   const map = useMap();
   const lastTodayRouteFocusKey = useRef(todayRouteFocusKey);
+  const lastMapFocusKey = useRef(mapFocusKey);
+  const lastSelectedHotelId = useRef<string | null>(selectedHotelId);
 
   useEffect(() => {
     if (lastTodayRouteFocusKey.current === todayRouteFocusKey) return;
@@ -70,6 +75,12 @@ function MapFocus({
   }, [map, todayHotels, todayRouteFocusKey]);
 
   useEffect(() => {
+    const selectedChanged = lastSelectedHotelId.current !== selectedHotelId;
+    const focusChanged = lastMapFocusKey.current !== mapFocusKey;
+    if (!selectedChanged && !focusChanged) return;
+    lastSelectedHotelId.current = selectedHotelId;
+    lastMapFocusKey.current = mapFocusKey;
+
     if (selectedHotelId) {
       const hotel = hotels.find((item) => item.id === selectedHotelId);
       if (hotel) {
@@ -90,7 +101,7 @@ function MapFocus({
       const bounds = hotels.map((hotel) => [hotel.lat, hotel.lon] as [number, number]);
       map.fitBounds(bounds, { padding: [24, 24], maxZoom: 13, animate: false });
     }
-  }, [hotels, map, selectedHotelId]);
+  }, [hotels, map, mapFocusKey, selectedHotelId]);
 
   return null;
 }
@@ -146,6 +157,7 @@ export function Map({
   labelsVisible,
   selectedHotelId,
   todayRouteFocusKey,
+  mapFocusKey,
   pickingLocation,
   onMapFocus,
   onViewportChange,
@@ -170,6 +182,7 @@ export function Map({
           todayHotels={todayHotels}
           selectedHotelId={selectedHotelId}
           todayRouteFocusKey={todayRouteFocusKey}
+          mapFocusKey={mapFocusKey}
         />
         <LocationPicker enabled={pickingLocation} onPickedLocation={onPickedLocation} />
         <MapInteraction enabled={!pickingLocation} onMapFocus={onMapFocus} />

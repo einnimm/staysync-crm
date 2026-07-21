@@ -14,11 +14,11 @@ const EMPTY_FILTERS: Filters = { status: '', search: '', area: '', kioskVendor: 
 const SALESPEOPLE_2026_07_20 = '임봉현, 정민희';
 const NON_LODGING_IDS = new Set(['flg-27655', 'flg-27981']);
 const NON_LODGING_KEYWORDS = ['오피스텔', '도시형생활주택', '메종드테라스', '여관', '여인숙'];
+const MANUAL_ROUTE_TAG = '동선추가';
 const VISIT_RECORDS_2026_07_20: Record<string, {
   note: string;
   memo: string;
   nextVisit?: string;
-  routeDate?: string;
   meeting?: string;
   tags?: string[];
 }> = {
@@ -26,7 +26,6 @@ const VISIT_RECORDS_2026_07_20: Record<string, {
     note: '7/20 영업 방문. 수요일 15시 이후 재방문 가능.',
     memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n수요일 15시 이후 재방문 가능.',
     nextVisit: '2026-07-22',
-    routeDate: '2026-07-22',
     meeting: '수요일 15시 이후',
     tags: ['재방문']
   },
@@ -34,7 +33,6 @@ const VISIT_RECORDS_2026_07_20: Record<string, {
     note: '7/20 영업 방문. 수요일 15시 재방문 가능.',
     memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n수요일 15시 재방문 가능.',
     nextVisit: '2026-07-22',
-    routeDate: '2026-07-22',
     meeting: '수요일 15시',
     tags: ['재방문']
   },
@@ -154,7 +152,7 @@ function createInitialState(hotel: Hotel, saved?: Partial<HotelState>): HotelSta
     visitCount: hotel.initialVisitCount || 0,
     lastVisit: hotel.initialLastVisit || '',
     nextVisit: hotel.initialNextVisit || '',
-    routeDate: hotel.initialNextVisit || '',
+    routeDate: '',
     meeting: hotel.initialMeeting || '',
     salesperson: '',
     salesStage: hotel.initialSalesStage || defaultStage(hotel),
@@ -188,6 +186,15 @@ function createInitialState(hotel: Hotel, saved?: Partial<HotelState>): HotelSta
     ];
   }
 
+  if (
+    merged.routeDate &&
+    hotel.initialNextVisit &&
+    merged.routeDate === hotel.initialNextVisit &&
+    !merged.tags.includes(MANUAL_ROUTE_TAG)
+  ) {
+    merged.routeDate = '';
+  }
+
   return applyVisitRecords(hotel, merged);
 }
 
@@ -210,6 +217,10 @@ function applyVisitRecords(hotel: Hotel, state: HotelState): HotelState {
       ];
 
   const tags = [...new Set([...(state.tags || []), ...(record.tags || [])])];
+  const routeDate =
+    state.routeDate && (!hotel.initialNextVisit || state.routeDate !== hotel.initialNextVisit || tags.includes(MANUAL_ROUTE_TAG))
+      ? state.routeDate
+      : '';
   return {
     ...state,
     status: state.status === 'excluded' ? state.status : 'visited',
@@ -217,7 +228,7 @@ function applyVisitRecords(hotel: Hotel, state: HotelState): HotelState {
     visitCount: Math.max(state.visitCount || 0, logs.length),
     lastVisit: ['2026-07-20', state.lastVisit].filter(Boolean).sort().pop() || '2026-07-20',
     nextVisit: record.nextVisit || state.nextVisit,
-    routeDate: record.routeDate || state.routeDate,
+    routeDate,
     meeting: record.meeting || state.meeting,
     salesperson: state.salesperson || SALESPEOPLE_2026_07_20,
     salesStage: state.salesStage === '미접촉' ? '상담중' : state.salesStage,
@@ -445,6 +456,8 @@ export default function App() {
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
   const [pendingRouteHotelId, setPendingRouteHotelId] = useState<string | null>(null);
   const [todayRouteFocusKey, setTodayRouteFocusKey] = useState(0);
+  const [mapFocusKey, setMapFocusKey] = useState(0);
+  const [routeFocusActive, setRouteFocusActive] = useState(false);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [editingHotelId, setEditingHotelId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -558,6 +571,14 @@ export default function App() {
   );
 
   const renderedHotels = useMemo(() => {
+    if (routeFocusActive) {
+      const routeIds = new Set([
+        ...routeHotels.map((hotel) => hotel.id),
+        ...(selectedHotelId ? [selectedHotelId] : [])
+      ]);
+      return hotels.filter((hotel) => routeIds.has(hotel.id));
+    }
+
     const pinnedIds = new Set([
       ...routeHotels.map((hotel) => hotel.id),
       ...historyHotels.map((hotel) => hotel.id),
@@ -583,14 +604,15 @@ export default function App() {
       ...viewportHotels.slice(0, Math.max(0, MAX_RENDERED_HOTELS - pinnedHotels.length)),
       ...limitedVisibleHotels
     ];
-  }, [historyHotels, hotels, selectedHotelId, routeHotels, shouldShowFilteredResults, viewportBounds, visibleHotels]);
+  }, [historyHotels, hotels, selectedHotelId, routeFocusActive, routeHotels, shouldShowFilteredResults, viewportBounds, visibleHotels]);
 
   const mapFocusHotels = useMemo(() => {
     if (selectedHotelId) return renderedHotels.filter((hotel) => hotel.id === selectedHotelId);
+    if (routeFocusActive) return routeHotels;
     if (visibleHotels.length) return visibleHotels.slice(0, MAX_RENDERED_HOTELS);
     if (historyHotels.length) return historyHotels;
-    return routeHotels;
-  }, [historyHotels, renderedHotels, routeHotels, selectedHotelId, visibleHotels]);
+    return [];
+  }, [historyHotels, renderedHotels, routeFocusActive, routeHotels, selectedHotelId, visibleHotels]);
 
   const totalCounts = useMemo(() => {
     const counts: Record<VisitStatus | 'total', number> = { total: hotels.length, planned: 0, today: 0, visited: 0, excluded: 0 };
@@ -659,10 +681,18 @@ export default function App() {
       status,
       routeDate: status === 'today' ? todayDate : current.routeDate
     }));
+    if (status === 'planned') {
+      setPendingRouteHotelId(id);
+      setSelectedHotelId(id);
+      setRouteFocusActive(false);
+      setSelectedHistoryDate('');
+      return;
+    }
     if (status === 'today') {
       setFilters({ ...EMPTY_FILTERS, status: 'today' });
       setSelectedHotelId(id);
       setMobileMapExpanded(false);
+      setRouteFocusActive(false);
       setSelectedRouteDate(todayDate);
       setSelectedHistoryDate('');
       setMobilePanelOpen(false);
@@ -678,16 +708,19 @@ export default function App() {
       ...current,
       status: 'planned',
       routeDate: date,
-      nextVisit: date
+      nextVisit: date,
+      tags: [...new Set([...(current.tags || []), MANUAL_ROUTE_TAG])]
     }));
     setPendingRouteHotelId(null);
     setSelectedRouteDate(date);
     setSelectedHistoryDate('');
-    setFilters({ ...EMPTY_FILTERS, status: 'planned' });
-    setSelectedHotelId(id);
-    setMobileMapExpanded(false);
+    setFilters(EMPTY_FILTERS);
+    setSelectedHotelId(null);
+    setRouteFocusActive(true);
+    setMobileMapExpanded(true);
     setMobilePanelOpen(false);
     setTodayRouteFocusKey((current) => current + 1);
+    setMapFocusKey((current) => current + 1);
   };
 
   const handleTodayRoute = () => {
@@ -701,10 +734,13 @@ export default function App() {
       alert('오늘 동선으로 지정한 업장이 없어.');
       return;
     }
-    setFilters({ ...EMPTY_FILTERS, status: 'today' });
+    setFilters(EMPTY_FILTERS);
     setSelectedHotelId(null);
+    setRouteFocusActive(true);
+    setMobileMapExpanded(true);
     setMobilePanelOpen(false);
     setTodayRouteFocusKey((current) => current + 1);
+    setMapFocusKey((current) => current + 1);
   };
 
   const handleSaveProfile = (id: string, form: FormData) => {
@@ -722,17 +758,20 @@ export default function App() {
               return acc;
             }, {})
           : current.actions;
+        const nextRouteDate = form.has('routeDate') ? String(form.get('routeDate') || '') : current.routeDate;
+        const formTags = form.has('tags')
+          ? String(form.get('tags') || '').split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean)
+          : current.tags;
+        const tags = nextRouteDate ? [...new Set([...formTags, MANUAL_ROUTE_TAG])] : formTags.filter((tag) => tag !== MANUAL_ROUTE_TAG);
 
         return {
           meeting: form.has('meeting') ? String(form.get('meeting') || '').trim() : current.meeting,
           salesperson: form.has('salesperson') ? String(form.get('salesperson') || '').trim() : current.salesperson,
           salesStage,
           nextVisit: form.has('nextVisit') ? String(form.get('nextVisit') || '') : current.nextVisit,
-          routeDate: form.has('routeDate') ? String(form.get('routeDate') || '') : current.routeDate,
+          routeDate: nextRouteDate,
           actions: form.has('actions') && salesStage === '도입완료' ? { ...actions, '도입 완료': true } : actions,
-          tags: form.has('tags')
-            ? String(form.get('tags') || '').split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean)
-            : current.tags,
+          tags,
           memo: form.has('memo') ? String(form.get('memo') || '').trim() : current.memo,
           status: form.has('salesStage') && salesStage === '영업제외' ? 'excluded' : current.status
         };
@@ -795,6 +834,7 @@ export default function App() {
           nextVisit: draft.routeDate || state[draft.id].nextVisit,
           salesStage: draft.salesStage,
           tags: draft.tags,
+          ...(draft.routeDate ? { tags: [...new Set([...draft.tags, MANUAL_ROUTE_TAG])] } : {}),
           actions: draft.actions
         }
       };
@@ -813,7 +853,7 @@ export default function App() {
           routeDate: draft.routeDate,
           nextVisit: draft.routeDate,
           salesStage: draft.salesStage,
-          tags: draft.tags,
+          tags: draft.routeDate ? [...new Set([...draft.tags, MANUAL_ROUTE_TAG])] : draft.tags,
           actions: draft.actions
         }
       };
@@ -905,24 +945,30 @@ export default function App() {
         onFiltersChange={(nextFilters) => {
           setFilters(nextFilters);
           setSelectedHotelId(null);
+          setRouteFocusActive(false);
           setMobileMapExpanded(true);
+          setMapFocusKey((current) => current + 1);
         }}
         onRouteDateChange={(date) => {
           setSelectedRouteDate(date);
           setSelectedHistoryDate('');
           setFilters(EMPTY_FILTERS);
           setSelectedHotelId(null);
+          setRouteFocusActive(true);
           setMobileMapExpanded(true);
           setMobilePanelOpen(false);
           setTodayRouteFocusKey((current) => current + 1);
+          setMapFocusKey((current) => current + 1);
         }}
         onHistoryDateChange={(date) => {
           setSelectedHistoryDate(date);
           setFilters(EMPTY_FILTERS);
           setSelectedHotelId(null);
+          setRouteFocusActive(false);
           setMobileMapExpanded(true);
           setMobilePanelOpen(false);
           setTodayRouteFocusKey((current) => current + 1);
+          setMapFocusKey((current) => current + 1);
         }}
         onLabelsChange={setLabelsVisible}
         onSelectHotel={(hotel) => {
@@ -941,6 +987,7 @@ export default function App() {
         labelsVisible={labelsVisible}
         selectedHotelId={selectedHotelId}
         todayRouteFocusKey={todayRouteFocusKey}
+        mapFocusKey={mapFocusKey}
         pickingLocation={pickingLocation}
         onMapFocus={() => setMobileMapExpanded(true)}
         onViewportChange={setViewportBounds}
