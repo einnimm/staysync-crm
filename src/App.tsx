@@ -654,11 +654,6 @@ export default function App() {
   };
 
   const handleStatusChange = (id: string, status: VisitStatus) => {
-    if (status === 'planned') {
-      setPendingRouteHotelId(id);
-      return;
-    }
-
     updateStateForHotel(id, (current) => ({
       ...current,
       status,
@@ -672,6 +667,10 @@ export default function App() {
       setSelectedHistoryDate('');
       setMobilePanelOpen(false);
     }
+  };
+
+  const handleRouteRequest = (id: string) => {
+    setPendingRouteHotelId(id);
   };
 
   const handleRouteDateAssign = (id: string, date: string) => {
@@ -956,6 +955,7 @@ export default function App() {
           setIsAdding((current) => current || !editingHotelId);
         }}
         onStatusChange={handleStatusChange}
+        onRouteRequest={handleRouteRequest}
         onSaveProfile={handleSaveProfile}
         onAddVisitLog={handleAddVisitLog}
         onEdit={(id) => {
@@ -1056,6 +1056,7 @@ export default function App() {
             isSheet
             onClose={() => setSelectedHotelId(null)}
             onStatusChange={handleStatusChange}
+            onRouteRequest={handleRouteRequest}
             onSaveProfile={handleSaveProfile}
             onAddVisitLog={handleAddVisitLog}
             onEdit={(id) => {

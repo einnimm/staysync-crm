@@ -240,6 +240,13 @@ textarea { resize: vertical; min-height: 82px; }
   text-align: center;
 }
 .save { background: var(--ink); color: #fff; }
+.route-add {
+  width: 100%;
+  margin-top: var(--control-gap);
+  border: 1px solid #f2c94c;
+  background: #fff7d6;
+  color: #6b4e00;
+}
 .naver { background: #03c75a; color: #fff; }
 .sheet-nav {
   display: block;

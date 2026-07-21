@@ -18,6 +18,7 @@ interface HotelPopupProps {
   isSheet?: boolean;
   onClose?: () => void;
   onStatusChange: (id: string, status: VisitStatus) => void;
+  onRouteRequest: (id: string) => void;
   onSaveProfile: (id: string, form: FormData) => void;
   onAddVisitLog: (id: string, form: FormData) => void;
   onEdit: (id: string) => void;
@@ -31,6 +32,7 @@ export function HotelPopup({
   isSheet = false,
   onClose,
   onStatusChange,
+  onRouteRequest,
   onSaveProfile,
   onAddVisitLog,
   onEdit,
@@ -133,10 +135,22 @@ export function HotelPopup({
               onStatusChange(hotel.id, status);
             }}
           >
-            {status === 'planned' ? '동선 예약' : status === 'today' ? '오늘 방문' : status === 'visited' ? '방문 완료' : '영업 제외'}
+            {status === 'planned' ? '방문 예정' : status === 'today' ? '오늘 방문' : status === 'visited' ? '방문 완료' : '영업 제외'}
           </button>
         ))}
       </div>
+      {hotelState.status === 'planned' && (
+        <button
+          className="route-add full"
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRouteRequest(hotel.id);
+          }}
+        >
+          {hotelState.routeDate ? `동선일 변경하기 · ${hotelState.routeDate}` : '동선에 추가하기'}
+        </button>
+      )}
 
       {!isSheet && (
         <form className="popup-form" onSubmit={(event) => {

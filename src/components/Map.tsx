@@ -32,6 +32,7 @@ interface MapProps {
   onPickedLocation: (lat: number, lon: number) => void;
   onTodayRoute: () => void;
   onStatusChange: (id: string, status: VisitStatus) => void;
+  onRouteRequest: (id: string) => void;
   onSaveProfile: (id: string, form: FormData) => void;
   onAddVisitLog: (id: string, form: FormData) => void;
   onEdit: (id: string) => void;
@@ -152,6 +153,7 @@ export function Map({
   onPickedLocation,
   onTodayRoute,
   onStatusChange,
+  onRouteRequest,
   onSaveProfile,
   onAddVisitLog,
   onEdit,
@@ -205,6 +207,7 @@ export function Map({
                   hotelState={hotelState}
                   statusLabel={STATUS_LABELS[hotelState.status]}
                   onStatusChange={onStatusChange}
+                  onRouteRequest={onRouteRequest}
                   onSaveProfile={onSaveProfile}
                   onAddVisitLog={onAddVisitLog}
                   onEdit={onEdit}
