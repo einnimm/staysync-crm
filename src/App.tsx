@@ -12,6 +12,8 @@ const MAX_RENDERED_HOTELS = 300;
 const ROUTE_DAYS = 14;
 const EMPTY_FILTERS: Filters = { status: '', search: '', area: '', kioskVendor: '', rmsVendor: '' };
 const SALESPEOPLE_2026_07_20 = '임봉현, 정민희';
+const NON_LODGING_IDS = new Set(['flg-27655', 'flg-27981']);
+const NON_LODGING_KEYWORDS = ['오피스텔', '도시형생활주택', '메종드테라스', '여관', '여인숙'];
 const VISIT_RECORDS_2026_07_20: Record<string, {
   note: string;
   memo: string;
@@ -123,6 +125,12 @@ function normalizeHotel(hotel: Partial<Hotel>): Hotel {
   };
 }
 
+function isLodgingSalesTarget(hotel: Partial<Hotel>): boolean {
+  if (hotel.id && NON_LODGING_IDS.has(hotel.id)) return false;
+  const text = `${hotel.name || ''} ${hotel.address || ''}`.replace(/\s/g, '').toLowerCase();
+  return !NON_LODGING_KEYWORDS.some((keyword) => text.includes(keyword.replace(/\s/g, '').toLowerCase()));
+}
+
 function inferVendor(value: string, candidates: string[]): string {
   const normalized = value.replace(/\s/g, '').toLowerCase();
   return candidates.find((candidate) => normalized.includes(candidate.replace(/\s/g, '').toLowerCase())) || '';
@@ -220,17 +228,17 @@ function applyVisitRecords(hotel: Hotel, state: HotelState): HotelState {
 
 function loadInitialHotels(): Hotel[] {
   const savedHotels = loadSavedHotels();
-  if (!savedHotels) return DEFAULT_HOTELS.map(normalizeHotel);
+  if (!savedHotels) return DEFAULT_HOTELS.filter(isLodgingSalesTarget).map(normalizeHotel);
 
-  const normalizedSaved = savedHotels.map(normalizeHotel);
-  return mergeDefaultHotels(normalizedSaved, DEFAULT_HOTELS);
+  const normalizedSaved = savedHotels.filter(isLodgingSalesTarget).map(normalizeHotel);
+  return mergeDefaultHotels(normalizedSaved, DEFAULT_HOTELS.filter(isLodgingSalesTarget));
 }
 
 function mergeDefaultHotels(savedHotels: Hotel[], defaultHotels: Hotel[]): Hotel[] {
   const savedIds = new Set(savedHotels.map((hotel) => hotel.id));
   return [
     ...savedHotels,
-    ...defaultHotels.map(normalizeHotel).filter((hotel) => !savedIds.has(hotel.id))
+    ...defaultHotels.filter(isLodgingSalesTarget).map(normalizeHotel).filter((hotel) => !savedIds.has(hotel.id))
   ];
 }
 
@@ -238,7 +246,7 @@ async function loadDefaultHotels(): Promise<Hotel[]> {
   const response = await fetch(`${import.meta.env.BASE_URL}default-hotels.json`);
   if (!response.ok) throw new Error('Default hotel data load failed');
   const hotels = (await response.json()) as Partial<Hotel>[];
-  return hotels.map(normalizeHotel);
+  return hotels.filter(isLodgingSalesTarget).map(normalizeHotel);
 }
 
 function buildState(hotels: Hotel[], savedState: Partial<HotelStateMap> = loadSavedState()): HotelStateMap {
@@ -452,7 +460,7 @@ export default function App() {
     loadDefaultHotels()
       .then((defaultHotels) => {
         if (cancelled) return;
-        const savedHotels = (loadSavedHotels() || []).map(normalizeHotel);
+        const savedHotels = (loadSavedHotels() || []).filter(isLodgingSalesTarget).map(normalizeHotel);
         const nextHotels = mergeDefaultHotels(savedHotels, defaultHotels);
         setHotels(nextHotels);
         setState(buildState(nextHotels, loadSavedState()));
