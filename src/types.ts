@@ -71,3 +71,8 @@ export interface Filters {
   rmsVendor: string;
   minRooms: string;
 }
+
+export interface AreaGroup {
+  province: string;
+  regions: string[];
+}

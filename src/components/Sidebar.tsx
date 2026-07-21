@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { Filters, Hotel, HotelStateMap, VisitStatus } from '../types';
+import type { AreaGroup, Filters, Hotel, HotelStateMap, VisitStatus } from '../types';
 
 const STATUS_LABELS: Record<VisitStatus, string> = {
   planned: '방문 예정',
@@ -14,7 +14,7 @@ interface SidebarProps {
   totalCounts: Record<VisitStatus | 'total', number>;
   filteredCount: number;
   filters: Filters;
-  areas: string[];
+  areaGroups: AreaGroup[];
   kioskVendors: string[];
   rmsVendors: string[];
   selectedRouteDate: string;
@@ -47,7 +47,7 @@ export function Sidebar({
   totalCounts,
   filteredCount,
   filters,
-  areas,
+  areaGroups,
   kioskVendors,
   rmsVendors,
   selectedRouteDate,
@@ -88,7 +88,7 @@ export function Sidebar({
     <aside className={`sidebar ${isMobileOpen ? 'open' : ''}`}>
       <div className="header">
         <h1>숙박업 영업지도</h1>
-        <span className="version">v2.2.0</span>
+        <span className="version">v2.2.1</span>
       </div>
       <div className="sub">STAYSYNC Sales CRM · 대표 미팅과 방문일지를 현재 기기에 자동 저장</div>
       {isLoadingHotels && <div className="sub">전국 숙소 DB 불러오는 중...</div>}
@@ -170,10 +170,14 @@ export function Sidebar({
           <label className="field">영업권역</label>
           <select value={filters.area} onChange={(event) => updateFilter({ area: event.target.value })}>
             <option value="">전체 권역</option>
-            {areas.map((area) => (
-              <option key={area} value={area}>
-                {area}
-              </option>
+            {areaGroups.map((group) => (
+              <optgroup key={group.province} label={group.province}>
+                {group.regions.map((area) => (
+                  <option key={area} value={area}>
+                    {area}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

@@ -27,6 +27,7 @@ interface MapProps {
   todayRouteFocusKey: number;
   pickingLocation: boolean;
   onMapFocus: () => void;
+  onViewportChange: (bounds: { north: number; south: number; east: number; west: number }) => void;
   onSelectHotel: (hotel: Hotel) => void;
   onPickedLocation: (lat: number, lon: number) => void;
   onTodayRoute: () => void;
@@ -106,6 +107,31 @@ function MapInteraction({ enabled, onMapFocus }: { enabled: boolean; onMapFocus:
   return null;
 }
 
+function ViewportTracker({ onViewportChange }: { onViewportChange: (bounds: { north: number; south: number; east: number; west: number }) => void }) {
+  const map = useMap();
+
+  const emitBounds = () => {
+    const bounds = map.getBounds();
+    onViewportChange({
+      north: bounds.getNorth(),
+      south: bounds.getSouth(),
+      east: bounds.getEast(),
+      west: bounds.getWest()
+    });
+  };
+
+  useEffect(() => {
+    emitBounds();
+  }, []);
+
+  useMapEvents({
+    moveend: emitBounds,
+    zoomend: emitBounds
+  });
+
+  return null;
+}
+
 export function Map({
   hotels,
   focusHotels,
@@ -116,6 +142,7 @@ export function Map({
   todayRouteFocusKey,
   pickingLocation,
   onMapFocus,
+  onViewportChange,
   onSelectHotel,
   onPickedLocation,
   onTodayRoute,
@@ -139,6 +166,7 @@ export function Map({
         />
         <LocationPicker enabled={pickingLocation} onPickedLocation={onPickedLocation} />
         <MapInteraction enabled={!pickingLocation} onMapFocus={onMapFocus} />
+        <ViewportTracker onViewportChange={onViewportChange} />
         {[...hotels].sort((a, b) => Number(state[a.id]?.status === 'today') - Number(state[b.id]?.status === 'today')).map((hotel) => {
           const hotelState = state[hotel.id];
           if (!hotelState) return null;
