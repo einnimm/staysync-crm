@@ -124,8 +124,16 @@ export function HotelPopup({
 
       <div className="statusbar">
         {(['planned', 'today', 'visited', 'excluded'] as VisitStatus[]).map((status) => (
-          <button key={status} className={status} onClick={() => onStatusChange(hotel.id, status)}>
-            {status === 'planned' ? '방문 예정' : status === 'today' ? '오늘 방문' : status === 'visited' ? '방문 완료' : '영업 제외'}
+          <button
+            key={status}
+            className={status}
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onStatusChange(hotel.id, status);
+            }}
+          >
+            {status === 'planned' ? '동선 예약' : status === 'today' ? '오늘 방문' : status === 'visited' ? '방문 완료' : '영업 제외'}
           </button>
         ))}
       </div>
@@ -214,8 +222,8 @@ export function HotelPopup({
       {!isSheet && (
         <div className="actions">
           <a className="naver" href={naverUrl(hotel)} target="_blank" rel="noopener noreferrer">네이버지도</a>
-          <button className="edit" onClick={() => onEdit(hotel.id)}>업장 수정</button>
-          <button className="delete" onClick={() => onDelete(hotel.id)}>업장 삭제</button>
+          <button className="edit" type="button" onClick={() => onEdit(hotel.id)}>업장 수정</button>
+          <button className="delete" type="button" onClick={() => onDelete(hotel.id)}>업장 삭제</button>
         </div>
       )}
     </div>

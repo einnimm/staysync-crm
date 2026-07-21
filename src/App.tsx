@@ -1017,6 +1017,22 @@ export default function App() {
           aria-label="업장 상세"
           onClick={() => setMobileMapExpanded(false)}
         >
+          <div className="sheet-size-controls" onClick={(event) => event.stopPropagation()}>
+            <button
+              className={mobileMapExpanded ? 'active' : ''}
+              type="button"
+              onClick={() => setMobileMapExpanded(true)}
+            >
+              지도 크게
+            </button>
+            <button
+              className={!mobileMapExpanded ? 'active' : ''}
+              type="button"
+              onClick={() => setMobileMapExpanded(false)}
+            >
+              정보 크게
+            </button>
+          </div>
           <HotelPopup
             hotel={selectedHotel}
             hotelState={state[selectedHotel.id]}

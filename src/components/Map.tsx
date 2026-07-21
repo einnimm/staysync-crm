@@ -58,31 +58,36 @@ function MapFocus({
 
     if (todayHotels.length === 1) {
       const [hotel] = todayHotels;
-      map.setView([hotel.lat, hotel.lon], 16);
+      map.setView([hotel.lat, hotel.lon], 16, { animate: false });
       return;
     }
 
     if (todayHotels.length > 1) {
       const bounds = todayHotels.map((hotel) => [hotel.lat, hotel.lon] as [number, number]);
-      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 });
+      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14, animate: false });
     }
   }, [map, todayHotels, todayRouteFocusKey]);
 
   useEffect(() => {
     if (selectedHotelId) {
       const hotel = hotels.find((item) => item.id === selectedHotelId);
-      if (hotel) map.setView([hotel.lat, hotel.lon], 15);
+      if (hotel) {
+        const point: [number, number] = [hotel.lat, hotel.lon];
+        if (!map.getBounds().pad(-0.18).contains(point) || map.getZoom() < 14) {
+          map.setView(point, Math.max(map.getZoom(), 15), { animate: false });
+        }
+      }
       return;
     }
     if (hotels.length === 1) {
       const [hotel] = hotels;
-      map.setView([hotel.lat, hotel.lon], 15);
+      map.setView([hotel.lat, hotel.lon], 15, { animate: false });
       return;
     }
 
     if (hotels.length > 1) {
       const bounds = hotels.map((hotel) => [hotel.lat, hotel.lon] as [number, number]);
-      map.fitBounds(bounds, { padding: [24, 24], maxZoom: 13 });
+      map.fitBounds(bounds, { padding: [24, 24], maxZoom: 13, animate: false });
     }
   }, [hotels, map, selectedHotelId]);
 

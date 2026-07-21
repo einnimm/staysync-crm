@@ -333,6 +333,7 @@ textarea { resize: vertical; min-height: 82px; }
   font-weight: 750;
 }
 .mobile-sheet { display: none; }
+.sheet-size-controls { display: none; }
 .modal-wrap { position: fixed; inset: 0; background: #0008; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 15px; }
 .modal { width: min(560px, 100%); max-height: 92vh; overflow: auto; background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 20px 60px #0004; }
 .modal h2 { margin: 0 0 4px; font-size: 19px; }
@@ -490,10 +491,32 @@ textarea { resize: vertical; min-height: 82px; }
     transition: max-height .18s ease, transform .18s ease;
   }
   .mobile-sheet.info-expanded {
-    max-height: 68dvh;
+    max-height: 67dvh;
   }
   .mobile-sheet.map-expanded {
     max-height: 34dvh;
+  }
+  .sheet-size-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--control-gap);
+    padding: 10px 12px 0;
+    background: #fff;
+  }
+  .sheet-size-controls button {
+    border: 1px solid #cfd7e5;
+    border-radius: var(--control-radius);
+    min-height: var(--control-height);
+    padding: 8px;
+    background: #fff;
+    color: #344054;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .sheet-size-controls button.active {
+    border-color: #f2c94c;
+    background: #fff7d6;
+    color: #6b4e00;
   }
   .sheet-popup {
     min-width: 0;
@@ -502,7 +525,7 @@ textarea { resize: vertical; min-height: 82px; }
     max-height: inherit;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 12px 12px calc(14px + env(safe-area-inset-bottom));
+    padding: 10px 12px calc(14px + env(safe-area-inset-bottom));
   }
   .sheet-popup h3 {
     max-width: calc(100vw - 92px);
