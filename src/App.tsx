@@ -12,47 +12,186 @@ const MAX_RENDERED_HOTELS = 300;
 const ROUTE_DAYS = 14;
 const EMPTY_FILTERS: Filters = { status: '', search: '', area: '', kioskVendor: '', rmsVendor: '' };
 const SALESPEOPLE_2026_07_20 = '임봉현, 정민희';
+const SALESPEOPLE_2026_07_22 = '임봉현, 정민희';
 const NON_LODGING_IDS = new Set(['flg-27655', 'flg-27981']);
 const NON_LODGING_KEYWORDS = ['오피스텔', '도시형생활주택', '메종드테라스', '여관', '여인숙'];
 const MANUAL_ROUTE_TAG = '동선추가';
-const VISIT_RECORDS_2026_07_20: Record<string, {
+const HOTEL_OVERRIDES: Record<string, Partial<Hotel>> = {
+  'hotel-078': { rooms: 43, kiosk: true, kioskVendor: '미확인', rms: true, rmsVendor: '호텔스토리', vendor: '호텔스토리' },
+  'flg-25197': { area: '주촌', name: '101', rooms: 29, kiosk: true, kioskVendor: '씨리얼', vendor: '씨리얼' },
+  'hotel-080': { rooms: 60 },
+  'hotel-083': { rooms: 28 },
+  'hotel-085': { rooms: 35, kiosk: true, kioskVendor: '벤디트', vendor: '벤디트' },
+  'hotel-086': { rooms: 40, kiosk: true, kioskVendor: '야놀자', vendor: '야놀자' },
+  'hotel-087': { rooms: 41, kiosk: true, kioskVendor: '벤디트', vendor: '벤디트' },
+  'flg-25350': { area: '삼계', name: '브라운도트', rooms: 35, kiosk: true, kioskVendor: '야놀자', vendor: '야놀자' },
+  'hotel-089': { rooms: 28, kiosk: false, kioskVendor: '', rms: true, rmsVendor: '씨리얼', vendor: '씨리얼' },
+  'hotel-090': { rooms: 41, kiosk: true, kioskVendor: '현금전용', vendor: '현금전용' },
+  'hotel-091': { rooms: 31, kiosk: true, kioskVendor: '미확인', vendor: '미확인' },
+  'hotel-092': { rooms: 35, kiosk: true, kioskVendor: '미확인', rms: true, rmsVendor: '더엠알(MR)', vendor: '더엠알(MR)' },
+  'hotel-093': { rooms: 35, kiosk: true, kioskVendor: '스마트R', vendor: '스마트R' },
+  'hotel-095': { rooms: 38 }
+};
+const VISIT_RECORDS: Record<string, {
+  date: string;
   note: string;
   memo: string;
+  salesperson: string;
   nextVisit?: string;
   meeting?: string;
+  salesStage?: SalesStage;
   tags?: string[];
+  actions?: string[];
 }> = {
   'hotel-016': {
+    date: '2026-07-20',
     note: '7/20 영업 방문. 수요일 15시 이후 재방문 가능.',
     memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n수요일 15시 이후 재방문 가능.',
+    salesperson: SALESPEOPLE_2026_07_20,
     nextVisit: '2026-07-22',
     meeting: '수요일 15시 이후',
     tags: ['재방문']
   },
   'hotel-20260720-gung': {
+    date: '2026-07-20',
     note: '7/20 영업 방문. 수요일 15시 재방문 가능.',
     memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n수요일 15시 재방문 가능.',
+    salesperson: SALESPEOPLE_2026_07_20,
     nextVisit: '2026-07-22',
     meeting: '수요일 15시',
     tags: ['재방문']
   },
   'hotel-004': {
+    date: '2026-07-20',
     note: '7/20 영업 방문. 오전 11시쯤 방문 가능.',
     memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n오전 11시쯤 방문 가능.',
+    salesperson: SALESPEOPLE_2026_07_20,
     meeting: '오전 11시쯤',
     tags: ['재방문']
   },
   'hotel-179': {
+    date: '2026-07-20',
     note: '7/20 영업 방문. 아고다 관리가 힘들어 후회 중이라고 함. 프로그램 관심은 크지 않으나 해외채널 관리 설명은 남자 대표에게 한 번 진행하면 좋겠음. 남자 대표는 저녁 시간대.',
     memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n아고다 관리가 힘들어 후회 중이라고 함.\n프로그램 관심은 크지 않지만 해외채널 관리 설명은 남자 대표에게 한 번 진행하면 좋겠음.\n남자 대표는 저녁 시간대.',
+    salesperson: SALESPEOPLE_2026_07_20,
     meeting: '남자 대표 저녁 시간대',
     tags: ['해외채널', '아고다', '재방문']
   },
   'hotel-027': {
+    date: '2026-07-20',
     note: '7/20 영업 방문. 미리 연락 후 방문 필요.',
     memo: '[2026-07-20]\n방문자: 임봉현, 정민희\n미리 연락 후 방문 필요.',
+    salesperson: SALESPEOPLE_2026_07_20,
     meeting: '미리 연락 후 방문',
     tags: ['재방문']
+  },
+  'hotel-078': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 호텔스토리 사용. 키오스크 운영.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n호텔스토리 사용.\n키오스크 운영.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    tags: ['키오스크', '호텔스토리']
+  },
+  'flg-25197': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 씨리얼 키오스크 사용. 예약 및 운영을 주먹구구식으로 관리.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n씨리얼 키오스크 사용.\n예약 및 운영을 주먹구구식으로 관리.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    tags: ['키오스크', '씨리얼', '운영관리']
+  },
+  'hotel-080': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 만실 빈도가 높은 업장. OTA 광고를 하지 않음.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n만실 빈도가 높은 업장.\nOTA 광고를 하지 않음.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    tags: ['만실빈도높음', 'OTA광고없음']
+  },
+  'hotel-083': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 실장 의견상 대표가 비용 지출에 매우 보수적이며 도입 가능성 낮음.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n실장 의견으로는 대표가 비용 지출에 매우 보수적이며 도입 가능성 낮음.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    salesStage: '보류',
+    tags: ['비용보수적', '도입가능성낮음']
+  },
+  'hotel-085': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 대표는 오전 12시 이전에 주로 근무. 벤디트 사용.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n대표는 오전 12시 이전에 주로 근무.\n벤디트 사용.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    meeting: '대표 오전 12시 이전',
+    tags: ['벤디트', '키오스크', '재방문']
+  },
+  'hotel-086': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 최신 야놀자 키오스크 사용. 프로그램은 사용하지 않음. 호의적인 반응.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n최신 야놀자 키오스크 사용.\n프로그램은 사용하지 않음.\n호의적인 반응.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    salesStage: '검토중',
+    tags: ['야놀자', '키오스크', '호의적']
+  },
+  'hotel-087': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 벤디트 사용. 키오스크 운영.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n벤디트 사용.\n키오스크 운영.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    tags: ['벤디트', '키오스크']
+  },
+  'flg-25350': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 구형 야놀자 키오스크 사용. 키오스크 활용도 낮음. 대표는 주로 오전에 방문. 현장 예약 위주 운영이라며 도입에 소극적.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n구형 야놀자 키오스크 사용.\n키오스크 활용도 낮음.\n대표는 주로 오전에 방문.\n현장 예약 위주 운영이라며 도입에 소극적인 반응.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    meeting: '대표 주로 오전 방문',
+    salesStage: '보류',
+    tags: ['야놀자', '구형키오스크', '키오스크활용낮음', '현장예약']
+  },
+  'hotel-089': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 검토 후 결정 예정. 도도포인트와 씨리얼 프로그램 사용. 키오스크 없음. 아고다만 운영, 해외 OTA 확장 계획 없음.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n검토 후 결정 예정.\n도도포인트 사용.\n씨리얼 프로그램 사용.\n키오스크 없음.\n아고다만 운영.\n해외 OTA 확장 계획 없음.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    salesStage: '검토중',
+    tags: ['검토중', '도도포인트', '씨리얼', '키오스크없음', '아고다']
+  },
+  'hotel-090': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 현금 결제만 가능한 키오스크 사용. 트립닷컴 운영 중. 해외 OTA 예약은 많지 않다고 함.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n현금 결제만 가능한 키오스크 사용.\n트립닷컴 운영 중.\n해외 OTA 예약이 많지 않다고 함.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    tags: ['현금전용키오스크', '트립닷컴']
+  },
+  'hotel-091': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 키오스크는 있으나 사용하지 않음. 추가 도입 계획 없음. 고객관리는 별도 운영.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n키오스크는 있으나 사용하지 않음.\n추가 도입 계획 없음.\n고객관리는 별도로 운영.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    salesStage: '보류',
+    tags: ['키오스크미사용', '추가도입계획없음', '고객관리별도']
+  },
+  'hotel-092': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 매각 예정. 더엠알(MR) 사용. 시연 완료. 키오스크는 있으나 사용하지 않음.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n매각 예정.\n더엠알(MR) 사용.\n시연 완료.\n키오스크는 있으나 사용하지 않음.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    salesStage: '보류',
+    tags: ['매각예정', '더엠알', '시연완료', '키오스크미사용'],
+    actions: ['직원 설명 완료']
+  },
+  'hotel-093': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 스마트R 키오스크 사용. 재방문 필요.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n스마트R 키오스크 사용.\n재방문 필요.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    tags: ['스마트R', '키오스크', '재방문']
+  },
+  'hotel-095': {
+    date: '2026-07-22',
+    note: '7/22 영업 방문. 매각 대기 중.',
+    memo: '[2026-07-22]\n방문자: 임봉현, 정민희\n매각 대기 중.',
+    salesperson: SALESPEOPLE_2026_07_22,
+    salesStage: '보류',
+    tags: ['매각대기']
   }
 };
 
@@ -95,7 +234,7 @@ function normalizeHotel(hotel: Partial<Hotel>): Hotel {
   const rooms = hotel.rooms as number | string | null | undefined;
   const vendor = hotel.vendor || '미확인';
   const kioskVendor = hotel.kioskVendor || inferVendor(vendor, ['벤디트', '야놀', '시리얼', '아이크루']);
-  return {
+  const normalized: Hotel = {
     id: hotel.id || newId(),
     area: hotel.area || '',
     name: hotel.name || '이름 없음',
@@ -120,6 +259,27 @@ function normalizeHotel(hotel: Partial<Hotel>): Hotel {
     initialMeeting: hotel.initialMeeting || '',
     initialSalesStage: hotel.initialSalesStage,
     initialTags: Array.isArray(hotel.initialTags) ? hotel.initialTags : []
+  };
+  return applyHotelOverrides(normalized);
+}
+
+function applyHotelOverrides(hotel: Hotel): Hotel {
+  const override = HOTEL_OVERRIDES[hotel.id];
+  if (!override) return hotel;
+  return normalizeOverrideFields({
+    ...hotel,
+    ...override
+  });
+}
+
+function normalizeOverrideFields(hotel: Hotel): Hotel {
+  const kioskVendor = hotel.kioskVendor || inferVendor(hotel.vendor || '', ['벤디트', '야놀', '시리얼', '아이크루', '스마트R']);
+  return {
+    ...hotel,
+    kiosk: Boolean(hotel.kiosk || kioskVendor),
+    kioskVendor,
+    rms: Boolean(hotel.rms || hotel.rmsVendor),
+    rooms: hotel.rooms === null || hotel.rooms === undefined ? null : Number(hotel.rooms)
   };
 }
 
@@ -174,7 +334,13 @@ function createInitialState(hotel: Hotel, saved?: Partial<HotelState>): HotelSta
     logs: Array.isArray(saved?.logs) ? saved.logs : []
   };
 
-  if (!merged.logs.length && merged.memo && merged.lastVisit) {
+  const visitRecord = VISIT_RECORDS[hotel.id];
+  if (
+    !merged.logs.length &&
+    merged.memo &&
+    merged.lastVisit &&
+    !(visitRecord && merged.lastVisit === visitRecord.date && merged.memo === visitRecord.memo)
+  ) {
     merged.logs = [
       {
         id: `migrated-${hotel.id}`,
@@ -199,24 +365,26 @@ function createInitialState(hotel: Hotel, saved?: Partial<HotelState>): HotelSta
 }
 
 function applyVisitRecords(hotel: Hotel, state: HotelState): HotelState {
-  const record = VISIT_RECORDS_2026_07_20[hotel.id];
+  const record = VISIT_RECORDS[hotel.id];
   if (!record) return state;
 
-  const logId = `visit-2026-07-20-${hotel.id}`;
+  const logId = `visit-${record.date}-${hotel.id}`;
   const logs = state.logs.some((log) => log.id === logId)
     ? state.logs
     : [
         ...state.logs,
         {
           id: logId,
-          date: '2026-07-20',
+          date: record.date,
           type: '영업 방문',
           note: record.note,
-          createdAt: '2026-07-20T09:00:00.000+09:00'
+          createdAt: `${record.date}T09:00:00.000+09:00`
         }
       ];
 
   const tags = [...new Set([...(state.tags || []), ...(record.tags || [])])];
+  const actions = { ...(state.actions || {}) };
+  for (const action of record.actions || []) actions[action] = true;
   const routeDate =
     state.routeDate && (!hotel.initialNextVisit || state.routeDate !== hotel.initialNextVisit || tags.includes(MANUAL_ROUTE_TAG))
       ? state.routeDate
@@ -226,12 +394,13 @@ function applyVisitRecords(hotel: Hotel, state: HotelState): HotelState {
     status: state.status === 'excluded' ? state.status : 'visited',
     memo: record.memo,
     visitCount: Math.max(state.visitCount || 0, logs.length),
-    lastVisit: ['2026-07-20', state.lastVisit].filter(Boolean).sort().pop() || '2026-07-20',
+    lastVisit: [record.date, state.lastVisit].filter(Boolean).sort().pop() || record.date,
     nextVisit: record.nextVisit || state.nextVisit,
     routeDate,
     meeting: record.meeting || state.meeting,
-    salesperson: state.salesperson || SALESPEOPLE_2026_07_20,
-    salesStage: state.salesStage === '미접촉' ? '상담중' : state.salesStage,
+    salesperson: state.salesperson || record.salesperson,
+    salesStage: record.salesStage || (state.salesStage === '미접촉' ? '상담중' : state.salesStage),
+    actions,
     tags,
     logs
   };

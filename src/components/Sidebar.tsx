@@ -88,7 +88,7 @@ export function Sidebar({
     <aside className={`sidebar ${isMobileOpen ? 'open' : ''}`}>
       <div className="header">
         <h1>숙박업 영업지도</h1>
-        <span className="version">v2.2.6</span>
+        <span className="version">v2.2.7</span>
       </div>
       <div className="sub">STAYSYNC Sales CRM · 대표 미팅과 방문일지를 현재 기기에 자동 저장</div>
       {isLoadingHotels && <div className="sub">전국 숙소 DB 불러오는 중...</div>}
